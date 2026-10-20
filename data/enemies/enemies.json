@@ -1,0 +1,5 @@
+{
+ "scout":{"behavior":"chase","hp":20,"speed":95,"accel":220,"radius":6,"contact_damage":10,"score":1,"color":"#FF5268"},
+ "interceptor":{"behavior":"strafe","hp":35,"speed":130,"accel":260,"radius":7,"contact_damage":12,"orbit_distance":110,"fire_interval":2.2,"bullet_speed":170,"bullet_damage":6,"score":2,"color":"#A78BFA"},
+ "bomber":{"behavior":"bomber","hp":80,"speed":45,"accel":80,"radius":10,"contact_damage":20,"keep_distance":150,"fire_interval":1.8,"bullet_speed":110,"bullet_damage":10,"burst":5,"score":4,"color":"#FFCC66"}
+}

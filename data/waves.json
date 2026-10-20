@@ -1,0 +1,7 @@
+{"run_duration":180,"spawn_radius":290,"max_enemies":60,"waves":[
+ {"start":0,"interval":2.0,"count":2,"weights":{"scout":1}},
+ {"start":30,"interval":2.0,"count":3,"weights":{"scout":3,"interceptor":1}},
+ {"start":60,"interval":1.8,"count":3,"weights":{"scout":3,"interceptor":2,"bomber":1}},
+ {"start":100,"interval":1.5,"count":4,"weights":{"scout":3,"interceptor":2,"bomber":1}},
+ {"start":140,"interval":1.2,"count":5,"weights":{"scout":4,"interceptor":3,"bomber":2}}
+]}
