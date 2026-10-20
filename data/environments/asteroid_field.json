@@ -1,0 +1,3 @@
+{"id":"asteroid_field","name":"ASTEROID FIELD","count":26,"ore_chance":0.25,"min_radius":7,"max_radius":16,"hp_per_radius":6,"drift":12,
+ "ore_fuse":1.2,"ore_blast_radius":70,"ore_blast_damage":40,"scrap_per_radius":0.25,
+ "meteor_interval":14,"meteor_warning":2.0,"meteor_radius":18,"meteor_speed":120,"safe_radius":90}

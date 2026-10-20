@@ -4,6 +4,7 @@ enum State { PLAYING, PAUSED, WON, LOST }
 var state: State = State.PLAYING
 var run_seed: int = 0
 var kills: int = 0
+var scrap: int = 0
 var run_time: float = 0.0
 var sector_name: String = "SECTOR 01 // OUTER RIM"
 var autotest_seconds: float = 0.0
@@ -28,6 +29,7 @@ func _ready() -> void:
 func start_run() -> void:
 	state = State.PLAYING
 	kills = 0
+	scrap = 0
 	run_time = 0.0
 	if not _seed_from_cli:
 		run_seed = 3287 if autotest_seconds > 0.0 else randi()

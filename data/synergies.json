@@ -1,0 +1,35 @@
+{
+ "gravity_missile": {
+  "name": "GRAVITY LOCK",
+  "desc": "导弹优先追踪引力井中的敌人，命中被牵引敌人伤害×1.6",
+  "weapons": [
+   "gravity_bomb",
+   "missile_swarm"
+  ],
+  "damage_mult": 1.6,
+  "any_of": []
+ },
+ "emp_crit": {
+  "name": "OVERCHARGE BREACH",
+  "desc": "脉冲/导弹命中被 EMP 剥盾的敌人必定暴击，暴击倍率×2.5",
+  "weapons": [
+   "emp_launcher"
+  ],
+  "crit_mult": 2.5,
+  "any_of": [
+   "pulse_cannon",
+   "missile_swarm"
+  ]
+ },
+ "ion_vortex": {
+  "name": "ION VORTEX",
+  "desc": "EMP 爆炸覆盖引力井时，井转化为离子漩涡，每秒造成伤害并持续眩晕",
+  "weapons": [
+   "gravity_bomb",
+   "emp_launcher"
+  ],
+  "dps": 28,
+  "extend": 1.5,
+  "any_of": []
+ }
+}

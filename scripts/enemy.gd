@@ -20,6 +20,12 @@ var flash := 0.0
 var fire_timer := 0.0
 var orbit_sign := 1.0
 var rng := RandomNumberGenerator.new()
+var shield := 0.0
+var max_shield := 0.0
+var emp_timer := 0.0
+var stun_timer := 0.0
+var in_well_timer := 0.0
+var last_hit_source := ""
 var mask: PackedStringArray
 var palette: Dictionary
 
@@ -29,6 +35,8 @@ func setup(b: Node, t: String, d: Dictionary, pos: Vector2, seed_value: int) -> 
 	data = d
 	behavior = d["behavior"]
 	hp = float(d["hp"])
+	max_shield = float(d.get("shield", 0))
+	shield = max_shield
 	radius = float(d["radius"])
 	speed = float(d["speed"])
 	accel = float(d["accel"])
@@ -43,7 +51,16 @@ func setup(b: Node, t: String, d: Dictionary, pos: Vector2, seed_value: int) -> 
 func _process(delta: float) -> void:
 	if not alive:
 		return
+	emp_timer = maxf(0.0, emp_timer - delta)
+	in_well_timer = maxf(0.0, in_well_timer - delta)
+	flash = maxf(0.0, flash - delta)
 	var p: Node2D = battle.player
+	if stun_timer > 0.0:
+		stun_timer -= delta
+		velocity = velocity.move_toward(Vector2.ZERO, 120.0 * delta)
+		global_position += velocity * delta
+		queue_redraw()
+		return
 	var to_p: Vector2 = p.global_position - global_position
 	var dist := to_p.length()
 	var dir := to_p / maxf(dist, 0.001)
@@ -58,7 +75,7 @@ func _process(delta: float) -> void:
 		"bomber":
 			var kd := float(data["keep_distance"])
 			desired = dir * clampf((dist - kd) / 60.0, -1.0, 1.0) * speed + dir.orthogonal() * orbit_sign * speed * 0.4
-	velocity = velocity.move_toward(desired, accel * delta)
+	velocity = velocity.move_toward(desired, accel * (0.25 if in_well_timer > 0.0 else 1.0) * delta)
 	global_position += velocity * delta
 	rotation = dir.angle() if behavior != "strafe" else velocity.angle()
 	if data.has("fire_interval") and p.alive:
@@ -69,7 +86,6 @@ func _process(delta: float) -> void:
 	if p.alive and dist < radius + p.radius:
 		p.take_damage(float(data["contact_damage"]), global_position)
 		take_damage(float(data["contact_damage"]), false)
-	flash = maxf(0.0, flash - delta)
 	queue_redraw()
 
 func _fire(dir: Vector2) -> void:
@@ -85,14 +101,28 @@ func _fire(dir: Vector2) -> void:
 		battle.spawn_projectile(global_position, dir * bs, dmg, 2.0, 1, col, false)
 	AudioManager.play("enemy_shoot")
 
-func take_damage(amount: float, crit: bool) -> void:
+func take_damage(amount: float, crit: bool, source := "", silent := false) -> void:
 	if not alive:
 		return
-	hp -= amount
-	flash = 0.08
-	battle.spawn_damage_number(global_position, amount, crit)
+	last_hit_source = source
+	var rest := amount
+	if shield > 0.0:
+		var absorbed := minf(shield, rest)
+		shield -= absorbed
+		rest -= absorbed
+	hp -= rest
+	if not silent:
+		flash = 0.08
+		battle.spawn_damage_number(global_position, amount, crit)
 	if hp <= 0.0:
 		die()
+
+## EMP: strip shields, stun, mark (for OVERCHARGE BREACH synergy).
+func apply_emp(stun: float, mark: float) -> void:
+	shield = 0.0
+	stun_timer = maxf(stun_timer, stun)
+	emp_timer = maxf(emp_timer, mark)
+	flash = 0.15
 
 func die() -> void:
 	alive = false
@@ -102,5 +132,12 @@ func die() -> void:
 
 func _draw() -> void:
 	var tint := Color(4, 4, 4) if flash > 0.0 else Color.WHITE
+	if stun_timer > 0.0 and flash <= 0.0:
+		tint = Color(0.6, 0.9, 1.4)
 	draw_set_transform(Vector2.ZERO, PI / 2.0, Vector2.ONE)
 	PixelLib.draw_mask(self, mask, palette, tint)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	if shield > 0.0:
+		draw_arc(Vector2.ZERO, radius + 3, 0, TAU, 16, Color(PixelLib.C_CYAN, 0.35 + 0.4 * shield / max_shield), 1.0)
+	if emp_timer > 0.0:
+		draw_rect(Rect2(-1, -radius - 6, 2, 2), PixelLib.C_WHITE if int(emp_timer * 10) % 2 == 0 else Color("#7fd1ff"))

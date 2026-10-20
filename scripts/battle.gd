@@ -1,12 +1,17 @@
 extends Node2D
+## Battle scene root. Builds world, environment, layers and UI in code; owns entity lists and spawn API.
 const PixelLib = preload("res://scripts/pixel.gd")
 const PlayerScript = preload("res://scripts/player.gd")
 const EnemyScript = preload("res://scripts/enemy.gd")
 const ProjectileScript = preload("res://scripts/projectile.gd")
 const EnemyDirectorScript = preload("res://scripts/enemy_director.gd")
-## Phase 1 battle scene root. Builds world, layers and UI in code; owns entity lists.
-const DamageNumberScript := preload("res://scripts/damage_number.gd")
-const MenuPanel := preload("res://scripts/menu_panel.gd")
+const FloatTextScript = preload("res://scripts/float_text.gd")
+const MenuPanel = preload("res://scripts/menu_panel.gd")
+const GravityWellScript = preload("res://scripts/gravity_well.gd")
+const SynergySystemScript = preload("res://scripts/synergy_system.gd")
+const AsteroidFieldScript = preload("res://scripts/asteroid_field.gd")
+const ShipBuilderScript = preload("res://scripts/ship_builder.gd")
+const AutotestDriverScript = preload("res://scripts/autotest_driver.gd")
 
 var arena := Rect2(-600, -340, 1200, 680)
 var run_duration := 180.0
@@ -14,20 +19,26 @@ var world: Node2D
 var fx_layer: Node2D
 var proj_layer: Node2D
 var enemy_layer: Node2D
-var player: PlayerScript
+var well_layer: Node2D
+var player: Node2D
 var camera: Camera2D
-var director: EnemyDirectorScript
+var director: Node
+var synergy: Node
+var field: Node2D
 var hud: Control
 var perf: Label
 var ui_layer: CanvasLayer
+var builder: Control
 var pause_menu: Control
 var end_menu: Control
+var driver: Node
 var enemies: Array = []
+var wells: Array = []
+var emp_blasts := 0
 var shake_amount := 0.0
 var shake_rng := RandomNumberGenerator.new()
 var ended := false
 var _real_time := 0.0
-var _log_timer := 0.0
 
 func _ready() -> void:
 	ObjectPool.reset()
@@ -50,11 +61,16 @@ func _ready() -> void:
 	border.width = 1.0
 	border.default_color = Color(PixelLib.C_VIOLET, 0.35)
 	world.add_child(border)
+	well_layer = Node2D.new()
+	world.add_child(well_layer)
+	field = AsteroidFieldScript.new()
+	world.add_child(field)
 	enemy_layer = Node2D.new()
 	world.add_child(enemy_layer)
 	player = PlayerScript.new()
 	world.add_child(player)
 	player.setup(self, arena)
+	field.setup(self, GameManager.run_seed + 101)
 	proj_layer = Node2D.new()
 	world.add_child(proj_layer)
 	fx_layer = Node2D.new()
@@ -70,6 +86,9 @@ func _ready() -> void:
 	player.add_child(camera)
 	stars.setup(camera, GameManager.run_seed)
 
+	synergy = SynergySystemScript.new()
+	add_child(synergy)
+	synergy.setup(self)
 	director = EnemyDirectorScript.new()
 	add_child(director)
 	director.setup(self, GameManager.run_seed)
@@ -79,16 +98,27 @@ func _ready() -> void:
 	ui_layer.layer = 10
 	ui_layer.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(ui_layer)
+	var edge := Control.new()
+	edge.set_script(preload("res://scripts/edge_fx.gd"))
+	edge.battle = self
+	ui_layer.add_child(edge)
 	hud = Control.new()
 	hud.set_script(preload("res://scripts/hud.gd"))
-	hud.battle = self
 	ui_layer.add_child(hud)
+	hud.bind(self)
 	perf = Label.new()
 	perf.set_script(preload("res://scripts/perf_overlay.gd"))
 	perf.battle = self
 	ui_layer.add_child(perf)
+	builder = ShipBuilderScript.new()
+	builder.visible = false
+	ui_layer.add_child(builder)
 
 	EventBus.player_died.connect(_on_player_died)
+	if GameManager.autotest_seconds > 0.0:
+		driver = AutotestDriverScript.new()
+		add_child(driver)
+		driver.setup(self)
 	print("[VOID SIGNAL] run start seed=%d duration=%.0fs" % [GameManager.run_seed, run_duration])
 
 func _process(delta: float) -> void:
@@ -98,35 +128,55 @@ func _process(delta: float) -> void:
 		director.tick(GameManager.run_time, delta)
 		if GameManager.run_time >= run_duration and player.alive:
 			_end(true)
+	wells = wells.filter(func(w: Variant) -> bool: return is_instance_valid(w))
 	if shake_amount > 0.0:
 		shake_amount = maxf(0.0, shake_amount - 20.0 * delta)
 		camera.offset = Vector2(shake_rng.randf_range(-1, 1), shake_rng.randf_range(-1, 1)) * shake_amount
-	if GameManager.autotest_seconds > 0.0:
-		_log_timer += delta
-		if _log_timer >= 15.0:
-			_log_timer = 0.0
-			print("[AUTOTEST] t=%.1fs hull=%.0f shield=%.0f kills=%d enemies=%d proj_active=%d pool_created=%d fps=%d" % [GameManager.run_time, player.hull, player.shield, GameManager.kills, enemies.size(), ObjectPool.active(ProjectileScript.POOL_KEY), ObjectPool.created_total, Engine.get_frames_per_second()])
-		if _real_time >= GameManager.autotest_seconds:
-			_autotest_finish("TIMEOUT")
+	if GameManager.autotest_seconds > 0.0 and _real_time >= GameManager.autotest_seconds and not ended:
+		_autotest_finish("TIMEOUT")
 
 func _autotest_finish(reason: String) -> void:
 	print("[AUTOTEST] END reason=%s state=%s run_time=%.1f kills=%d spawned=%d hull=%.0f" % [reason, GameManager.State.keys()[GameManager.state], GameManager.run_time, GameManager.kills, director.spawned_total, player.hull])
+	var ok: bool = driver.report() if driver else true
 	print("[AUTOTEST] PERF\n" + perf.summary())
-	get_tree().quit(0)
+	get_tree().paused = true
+	AudioManager.stop_all()
+	set_process(false)
+	await get_tree().create_timer(0.3, true, false, true).timeout
+	get_tree().quit(0 if ok else 1)
+
+func ui_blocks_fire() -> bool:
+	return builder.visible or (hud.widget and hud.widget.dragging) or (hud.widget and Rect2(hud.widget.global_position, hud.widget.size).has_point(get_viewport().get_mouse_position()) and not InputManager.using_gamepad)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause") and not ended:
-		_toggle_pause()
+		if builder.visible:
+			toggle_builder()
+		else:
+			_toggle_pause()
+	elif event.is_action_pressed("builder") and not ended and pause_menu == null:
+		toggle_builder()
+
+func toggle_builder() -> void:
+	if builder.visible:
+		builder.visible = false
+		get_tree().paused = false
+	else:
+		builder.open_with(self)
+		get_tree().paused = true
 
 func _toggle_pause() -> void:
 	var p := not get_tree().paused
 	get_tree().paused = p
 	GameManager.state = GameManager.State.PAUSED if p else GameManager.State.PLAYING
 	if p:
-		pause_menu = _make_menu("PAUSED", "SIGNAL ON HOLD", ["RESUME", "RESTART", "QUIT"])
+		pause_menu = _make_menu("PAUSED", "SIGNAL ON HOLD", ["RESUME", "RESTART", _flash_label(), "QUIT"])
 	elif pause_menu:
 		pause_menu.queue_free()
 		pause_menu = null
+
+func _flash_label() -> String:
+	return "REDUCE FLASH: " + ("ON" if bool(SaveManager.settings.get("reduce_flash", false)) else "OFF")
 
 func _make_menu(title: String, sub: String, actions: Array) -> Control:
 	var m := Control.new()
@@ -138,6 +188,11 @@ func _make_menu(title: String, sub: String, actions: Array) -> Control:
 	return m
 
 func _on_menu(action: String) -> void:
+	if action.begins_with("REDUCE FLASH"):
+		SaveManager.set_setting("reduce_flash", not bool(SaveManager.settings.get("reduce_flash", false)))
+		pause_menu.queue_free()
+		pause_menu = _make_menu("PAUSED", "SIGNAL ON HOLD", ["RESUME", "RESTART", _flash_label(), "QUIT"])
+		return
 	match action:
 		"RESUME":
 			_toggle_pause()
@@ -170,24 +225,44 @@ func _end(won: bool) -> void:
 	end_menu = _make_menu(title, sub, ["RESTART", "QUIT"])
 
 # ---- spawning API used by systems ----
-func spawn_projectile(pos: Vector2, vel: Vector2, dmg: float, life: float, team: int, col: Color, crit: bool) -> void:
-	var p: ProjectileScript = ObjectPool.acquire(ProjectileScript.POOL_KEY, func() -> Node:
-		var n := ProjectileScript.new()
+func spawn_projectile(pos: Vector2, vel: Vector2, dmg: float, life: float, team: int, col: Color, crit: bool, extra: Dictionary = {}) -> void:
+	var p: Node2D = ObjectPool.acquire(ProjectileScript.POOL_KEY, func() -> Node:
+		var n: Node2D = ProjectileScript.new()
 		proj_layer.add_child(n)
 		return n)
-	p.setup(self, pos, vel, dmg, life, team, col, crit)
+	p.setup(self, pos, vel, dmg, life, team, col, crit, extra)
 
 func spawn_enemy(type_id: String, data: Dictionary, pos: Vector2, seed_value: int) -> void:
-	var e: EnemyScript = EnemyScript.new()
+	var e: Node2D = EnemyScript.new()
 	enemy_layer.add_child(e)
 	e.setup(self, type_id, data, pos, seed_value)
 	enemies.append(e)
 	EventBus.enemy_spawned.emit(type_id)
 	spawn_explosion(pos, Color(PixelLib.C_VIOLET, 0.6), 6)
 
-func remove_enemy(e: EnemyScript) -> void:
+func remove_enemy(e: Node2D) -> void:
 	enemies.erase(e)
 	e.queue_free()
+
+func asteroid_at(pos: Vector2, r: float) -> Node2D:
+	return field.asteroid_at(pos, r)
+
+func spawn_gravity_well(pos: Vector2, d: Dictionary) -> void:
+	var w: Node2D = GravityWellScript.new()
+	well_layer.add_child(w)
+	w.setup(self, pos, d)
+	wells.append(w)
+	spawn_explosion(pos, PixelLib.C_VIOLET, 12)
+
+func emp_blast(pos: Vector2, d: Dictionary, dmg: float) -> void:
+	emp_blasts += 1
+	var r := float(d.get("blast_radius", 60))
+	for e in enemies.duplicate():
+		if e.alive and e.global_position.distance_to(pos) <= r + e.radius:
+			e.apply_emp(float(d.get("stun_time", 1.5)), float(d.get("emp_mark_time", 3.0)))
+			e.take_damage(dmg, false, "emp_launcher")
+	synergy.on_emp_blast(pos, r)
+	spawn_explosion(pos, Color("#7fd1ff"), 24)
 
 func spawn_explosion(pos: Vector2, col: Color, amount: int) -> void:
 	var p := CPUParticles2D.new()
@@ -218,15 +293,19 @@ func spawn_explosion(pos: Vector2, col: Color, amount: int) -> void:
 func spawn_dash_trail(pos: Vector2, dir: Vector2) -> void:
 	spawn_explosion(pos - dir * 6.0, PixelLib.C_CYAN, 8)
 
-func spawn_damage_number(pos: Vector2, amount: float, crit: bool) -> void:
-	if fx_layer.get_child_count() > 120:
+func spawn_float_text(pos: Vector2, t: String, col: Color, life := 0.6) -> void:
+	if fx_layer.get_child_count() > 150:
 		return
-	var d := Node2D.new()
-	d.set_script(DamageNumberScript)
-	d.text = str(int(amount)) + ("!" if crit else "")
-	d.color = PixelLib.C_GOLD if crit else PixelLib.C_WHITE
-	d.global_position = pos + Vector2(0, -8)
+	var d: Node2D = FloatTextScript.new()
+	d.text = t
+	d.color = col
+	d.life = life
+	d.max_life = life
+	d.global_position = pos
 	fx_layer.add_child(d)
+
+func spawn_damage_number(pos: Vector2, amount: float, crit: bool) -> void:
+	spawn_float_text(pos + Vector2(0, -8), str(int(amount)) + ("!" if crit else ""), PixelLib.C_GOLD if crit else PixelLib.C_WHITE)
 
 func shake(amount: float) -> void:
 	if bool(SaveManager.settings.get("screen_shake", true)):

@@ -1,0 +1,15 @@
+{"name":"SIGNAL SCOUT Mk.II","grid_size":7,"base":{"hull":60,"turn":120,"max_speed_per_thrust":0.17,"accel_per_thrust":0.65,"shield_regen_delay":2.0},
+ "modules":[
+  {"x":3,"y":3,"id":"core"},
+  {"x":4,"y":3,"id":"cockpit"},
+  {"x":5,"y":3,"id":"weapon_mount","weapon":"pulse_cannon"},
+  {"x":2,"y":3,"id":"main_thruster"},
+  {"x":3,"y":2,"id":"shield_gen"},
+  {"x":3,"y":4,"id":"armor"},
+  {"x":4,"y":2,"id":"weapon_mount","weapon":"missile_swarm"},
+  {"x":4,"y":4,"id":"weapon_mount","weapon":"emp_launcher"},
+  {"x":3,"y":1,"id":"weapon_mount","weapon":"gravity_bomb"},
+  {"x":2,"y":2,"id":"side_thruster"},
+  {"x":2,"y":4,"id":"side_thruster"},
+  {"x":3,"y":5,"id":"radiator"}
+ ]}

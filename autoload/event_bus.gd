@@ -10,3 +10,8 @@ signal run_lost
 signal heat_changed(heat: float, overheated: bool)
 signal dash_used
 signal weapon_fired(weapon_id: String)
+signal synergy_triggered(id: String, pos: Vector2)
+signal module_destroyed(module_id: String)
+signal core_overheated(category: String, duration: float)
+signal preset_changed(name: String)
+signal ship_rebuilt
