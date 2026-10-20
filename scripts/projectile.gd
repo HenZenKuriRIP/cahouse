@@ -1,5 +1,5 @@
-class_name Projectile
 extends Node2D
+const PixelLib = preload("res://scripts/pixel.gd")
 ## Pooled projectile. Movement + collision is pure logic; _draw is visual only.
 const POOL_KEY := "projectile"
 var velocity := Vector2.ZERO
@@ -59,7 +59,7 @@ func deactivate() -> void:
 func _draw() -> void:
 	if team == 0:
 		draw_rect(Rect2(-3, -1, 6, 2), color)
-		draw_rect(Rect2(1, -1, 2, 2), Pixel.C_WHITE if not crit else Pixel.C_GOLD)
+		draw_rect(Rect2(1, -1, 2, 2), PixelLib.C_WHITE if not crit else PixelLib.C_GOLD)
 	else:
 		draw_rect(Rect2(-2, -2, 4, 4), color)
-		draw_rect(Rect2(-1, -1, 2, 2), Pixel.C_WHITE)
+		draw_rect(Rect2(-1, -1, 2, 2), PixelLib.C_WHITE)

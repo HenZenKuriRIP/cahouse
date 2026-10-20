@@ -1,5 +1,5 @@
-class_name Enemy
 extends Node2D
+const PixelLib = preload("res://scripts/pixel.gd")
 ## Data-driven enemy. Behaviour chosen by data["behavior"]: chase / strafe / bomber.
 const MASKS := {
 	"chase": ["..xx..", ".xwwx.", "xxwwxx", "xx..xx", "x....x"],
@@ -38,7 +38,7 @@ func setup(b: Node, t: String, d: Dictionary, pos: Vector2, seed_value: int) -> 
 	fire_timer = rng.randf_range(0.5, float(d.get("fire_interval", 2.0)))
 	mask = PackedStringArray(MASKS[behavior])
 	var col := Color(d["color"])
-	palette = {"x": col, "d": col.darkened(0.4), "w": Pixel.C_WHITE}
+	palette = {"x": col, "d": col.darkened(0.4), "w": PixelLib.C_WHITE}
 
 func _process(delta: float) -> void:
 	if not alive:
@@ -103,4 +103,4 @@ func die() -> void:
 func _draw() -> void:
 	var tint := Color(4, 4, 4) if flash > 0.0 else Color.WHITE
 	draw_set_transform(Vector2.ZERO, PI / 2.0, Vector2.ONE)
-	Pixel.draw_mask(self, mask, palette, tint)
+	PixelLib.draw_mask(self, mask, palette, tint)

@@ -52,3 +52,10 @@ func _make_tone(freq: float, dur: float, noise: bool, sweep: float) -> AudioStre
 	w.stereo = false
 	w.data = data
 	return w
+
+func _exit_tree() -> void:
+	# Stop playbacks so no AudioStreamPlayback is alive at engine shutdown (avoids leak warnings).
+	for p in _players:
+		p.stop()
+		p.stream = null
+	_sounds.clear()

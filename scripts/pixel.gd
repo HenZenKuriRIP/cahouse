@@ -1,4 +1,3 @@
-class_name Pixel
 ## Helpers to draw original pixel-art sprites procedurally from string masks.
 const C_BG := Color("#080C18")
 const C_PANEL := Color("#10182B")

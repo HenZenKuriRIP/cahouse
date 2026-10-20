@@ -1,7 +1,10 @@
 extends Node2D
+const PixelLib = preload("res://scripts/pixel.gd")
+const PlayerScript = preload("res://scripts/player.gd")
+const EnemyScript = preload("res://scripts/enemy.gd")
+const ProjectileScript = preload("res://scripts/projectile.gd")
+const EnemyDirectorScript = preload("res://scripts/enemy_director.gd")
 ## Phase 1 battle scene root. Builds world, layers and UI in code; owns entity lists.
-const ProjectileScript := preload("res://scripts/projectile.gd")
-const EnemyScript := preload("res://scripts/enemy.gd")
 const DamageNumberScript := preload("res://scripts/damage_number.gd")
 const MenuPanel := preload("res://scripts/menu_panel.gd")
 
@@ -11,9 +14,9 @@ var world: Node2D
 var fx_layer: Node2D
 var proj_layer: Node2D
 var enemy_layer: Node2D
-var player: Player
+var player: PlayerScript
 var camera: Camera2D
-var director: EnemyDirector
+var director: EnemyDirectorScript
 var hud: Control
 var perf: Label
 var ui_layer: CanvasLayer
@@ -45,11 +48,11 @@ func _ready() -> void:
 	var border := Line2D.new()
 	border.points = PackedVector2Array([arena.position, Vector2(arena.end.x, arena.position.y), arena.end, Vector2(arena.position.x, arena.end.y), arena.position])
 	border.width = 1.0
-	border.default_color = Color(Pixel.C_VIOLET, 0.35)
+	border.default_color = Color(PixelLib.C_VIOLET, 0.35)
 	world.add_child(border)
 	enemy_layer = Node2D.new()
 	world.add_child(enemy_layer)
-	player = Player.new()
+	player = PlayerScript.new()
 	world.add_child(player)
 	player.setup(self, arena)
 	proj_layer = Node2D.new()
@@ -67,7 +70,7 @@ func _ready() -> void:
 	player.add_child(camera)
 	stars.setup(camera, GameManager.run_seed)
 
-	director = EnemyDirector.new()
+	director = EnemyDirectorScript.new()
 	add_child(director)
 	director.setup(self, GameManager.run_seed)
 	run_duration = director.run_duration
@@ -102,7 +105,7 @@ func _process(delta: float) -> void:
 		_log_timer += delta
 		if _log_timer >= 15.0:
 			_log_timer = 0.0
-			print("[AUTOTEST] t=%.1fs hull=%.0f shield=%.0f kills=%d enemies=%d proj_active=%d pool_created=%d fps=%d" % [GameManager.run_time, player.hull, player.shield, GameManager.kills, enemies.size(), ObjectPool.active(Projectile.POOL_KEY), ObjectPool.created_total, Engine.get_frames_per_second()])
+			print("[AUTOTEST] t=%.1fs hull=%.0f shield=%.0f kills=%d enemies=%d proj_active=%d pool_created=%d fps=%d" % [GameManager.run_time, player.hull, player.shield, GameManager.kills, enemies.size(), ObjectPool.active(ProjectileScript.POOL_KEY), ObjectPool.created_total, Engine.get_frames_per_second()])
 		if _real_time >= GameManager.autotest_seconds:
 			_autotest_finish("TIMEOUT")
 
@@ -168,21 +171,21 @@ func _end(won: bool) -> void:
 
 # ---- spawning API used by systems ----
 func spawn_projectile(pos: Vector2, vel: Vector2, dmg: float, life: float, team: int, col: Color, crit: bool) -> void:
-	var p: Projectile = ObjectPool.acquire(Projectile.POOL_KEY, func() -> Node:
+	var p: ProjectileScript = ObjectPool.acquire(ProjectileScript.POOL_KEY, func() -> Node:
 		var n := ProjectileScript.new()
 		proj_layer.add_child(n)
 		return n)
 	p.setup(self, pos, vel, dmg, life, team, col, crit)
 
 func spawn_enemy(type_id: String, data: Dictionary, pos: Vector2, seed_value: int) -> void:
-	var e: Enemy = EnemyScript.new()
+	var e: EnemyScript = EnemyScript.new()
 	enemy_layer.add_child(e)
 	e.setup(self, type_id, data, pos, seed_value)
 	enemies.append(e)
 	EventBus.enemy_spawned.emit(type_id)
-	spawn_explosion(pos, Color(Pixel.C_VIOLET, 0.6), 6)
+	spawn_explosion(pos, Color(PixelLib.C_VIOLET, 0.6), 6)
 
-func remove_enemy(e: Enemy) -> void:
+func remove_enemy(e: EnemyScript) -> void:
 	enemies.erase(e)
 	e.queue_free()
 
@@ -202,7 +205,7 @@ func spawn_explosion(pos: Vector2, col: Color, amount: int) -> void:
 	p.scale_amount_min = 1.0
 	p.scale_amount_max = 3.0
 	var grad := Gradient.new()
-	grad.set_color(0, Pixel.C_WHITE)
+	grad.set_color(0, PixelLib.C_WHITE)
 	grad.set_color(1, Color(col, 0.0))
 	grad.add_point(0.3, col)
 	p.color_ramp = grad
@@ -213,7 +216,7 @@ func spawn_explosion(pos: Vector2, col: Color, amount: int) -> void:
 		shake(minf(5.0, amount / 10.0))
 
 func spawn_dash_trail(pos: Vector2, dir: Vector2) -> void:
-	spawn_explosion(pos - dir * 6.0, Pixel.C_CYAN, 8)
+	spawn_explosion(pos - dir * 6.0, PixelLib.C_CYAN, 8)
 
 func spawn_damage_number(pos: Vector2, amount: float, crit: bool) -> void:
 	if fx_layer.get_child_count() > 120:
@@ -221,7 +224,7 @@ func spawn_damage_number(pos: Vector2, amount: float, crit: bool) -> void:
 	var d := Node2D.new()
 	d.set_script(DamageNumberScript)
 	d.text = str(int(amount)) + ("!" if crit else "")
-	d.color = Pixel.C_GOLD if crit else Pixel.C_WHITE
+	d.color = PixelLib.C_GOLD if crit else PixelLib.C_WHITE
 	d.global_position = pos + Vector2(0, -8)
 	fx_layer.add_child(d)
 

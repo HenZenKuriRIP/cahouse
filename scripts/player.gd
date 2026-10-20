@@ -1,5 +1,6 @@
-class_name Player
 extends Node2D
+const PixelLib = preload("res://scripts/pixel.gd")
+const WeaponScript = preload("res://scripts/weapon.gd")
 ## Player ship: inertia movement, aim, dash, hull + regenerating shield.
 const ACCEL := 520.0
 const MAX_SPEED := 170.0
@@ -20,7 +21,7 @@ var MASK := PackedStringArray([
 	"...cwwc.....",
 	"....cc......",
 ])
-var palette := {"c": Pixel.C_CYAN, "w": Pixel.C_WHITE, "p": Pixel.C_PANEL.lightened(0.25)}
+var palette := {"c": PixelLib.C_CYAN, "w": PixelLib.C_WHITE, "p": PixelLib.C_PANEL.lightened(0.25)}
 
 var battle: Node
 var velocity := Vector2.ZERO
@@ -36,7 +37,7 @@ var flash := 0.0
 var alive := true
 var thrusting := false
 var flame_phase := 0.0
-var weapon: Weapon
+var weapon: WeaponScript
 var aim_dir := Vector2.RIGHT
 var god := false
 var bounds := Rect2()
@@ -44,7 +45,7 @@ var bounds := Rect2()
 func setup(b: Node, arena: Rect2) -> void:
 	battle = b
 	bounds = arena
-	weapon = Weapon.new("res://data/weapons/pulse_cannon.json", GameManager.run_seed)
+	weapon = WeaponScript.new("res://data/weapons/pulse_cannon.json", GameManager.run_seed)
 	god = GameManager.autotest_god
 
 func _process(delta: float) -> void:
@@ -135,20 +136,20 @@ func take_damage(amount: float, from_pos: Vector2) -> void:
 		hull = 0.0
 		alive = false
 		visible = false
-		battle.spawn_explosion(global_position, Pixel.C_CYAN, 40)
+		battle.spawn_explosion(global_position, PixelLib.C_CYAN, 40)
 		EventBus.player_died.emit()
 
 func _draw() -> void:
 	if thrusting or dash_timer > 0.0:
 		var len := 3 + int(flame_phase) % 3 + (4 if dash_timer > 0.0 else 0)
-		draw_rect(Rect2(-6 - len, -1, len, 2), Pixel.C_GOLD)
-		draw_rect(Rect2(-6 - len / 2, -1, len / 2, 2), Pixel.C_WHITE)
-		draw_rect(Rect2(-7 - len, 0, 2, 1), Pixel.C_RED)
+		draw_rect(Rect2(-6 - len, -1, len, 2), PixelLib.C_GOLD)
+		draw_rect(Rect2(-6 - len / 2, -1, len / 2, 2), PixelLib.C_WHITE)
+		draw_rect(Rect2(-7 - len, 0, 2, 1), PixelLib.C_RED)
 	var tint := Color.WHITE
 	if flash > 0.0:
 		tint = Color(3, 3, 3)
 	elif dash_timer > 0.0:
 		tint = Color(1, 1, 1, 0.6)
-	Pixel.draw_mask(self, MASK, palette, tint)
+	PixelLib.draw_mask(self, MASK, palette, tint)
 	if shield > 1.0 and flash > 0.0:
-		draw_arc(Vector2.ZERO, 9, 0, TAU, 16, Color(Pixel.C_CYAN, 0.6), 1.0)
+		draw_arc(Vector2.ZERO, 9, 0, TAU, 16, Color(PixelLib.C_CYAN, 0.6), 1.0)

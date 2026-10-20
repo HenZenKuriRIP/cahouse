@@ -1,4 +1,3 @@
-class_name EnemyDirector
 extends Node
 ## Seeded wave spawner driven by data/waves.json over the run duration.
 var battle: Node

@@ -1,4 +1,3 @@
-class_name Weapon
 extends RefCounted
 ## Data-driven weapon (loaded from JSON). Handles fire-rate, heat and overheat.
 var data: Dictionary
