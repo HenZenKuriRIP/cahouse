@@ -147,3 +147,4 @@ graph TD
 - `holo_overlay.gd`：全屏 shader 叠层（扫描线/暗角/闪烁）。
 - `shot_director.gd`：`--shots=` 时驱动游戏进入各状态并截图视口。
 - 主场景：`scenes/title.tscn` → `scenes/battle.tscn`；暂停/结算菜单可返回标题。
+- `touch_controls.gd`：战斗内触屏层（battle.touch），player.gd 在非 autotest 时读取 move_vec / aim_vec / aim_active() / 按钮状态；坐标为逻辑视口坐标（根视口自动应用拉伸变换）。

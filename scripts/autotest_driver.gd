@@ -35,6 +35,89 @@ func setup(b: Node) -> void:
 	fld._spawn(base + Vector2(60, 10), 10.0, true, Vector2.ZERO)
 	o1.ignite(false)
 
+var _touch_phase := 0
+var _touch_t0 := 0.0
+var _touch_fired0 := 0
+var _touch_was := false
+
+func _st(idx: int, pressed: bool, pos: Vector2) -> InputEventScreenTouch:
+	var ev := InputEventScreenTouch.new()
+	ev.index = idx
+	ev.pressed = pressed
+	ev.position = pos
+	return ev
+
+func _sd(idx: int, pos: Vector2) -> InputEventScreenDrag:
+	var ev := InputEventScreenDrag.new()
+	ev.index = idx
+	ev.position = pos
+	return ev
+
+## Simulated multi-touch: left stick (move) and right stick (aim + fire) held at the same time by two fingers,
+## then buttons and a third/fourth finger on the energy triangle. Events go through TouchControls.handle(), the
+## same function its _input() calls, using logical viewport coordinates.
+func _touch_tests(p: Node2D) -> void:
+	var tc: Control = battle.touch
+	p.auto = {}
+	if _touch_phase == 0:
+		_touch_was = tc.enabled
+		tc.enabled = true
+		var n := 0
+		for k in weapon_fired:
+			n += int(weapon_fired[k])
+		_touch_fired0 = n
+		var a: bool = tc.handle(_st(0, true, Vector2(60, 330)))
+		var b: bool = tc.handle(_st(1, true, Vector2(190, 330)))
+		tc.handle(_sd(0, Vector2(60, 300)))
+		tc.handle(_sd(1, Vector2(215, 330)))
+		_check("touch.both_sticks_claimed", a and b and tc.fingers.size() == 2, "fingers=%d" % tc.fingers.size())
+		_touch_t0 = t
+		_touch_phase = 1
+		return
+	if t - _touch_t0 < 0.4:
+		return
+	var n2 := 0
+	for k in weapon_fired:
+		n2 += int(weapon_fired[k])
+	_check("touch.multitouch_move_and_aim", tc.move_vec.y < -0.9 and tc.aim_vec.x > 0.9 and tc.aim_active(),
+		"move=%s aim=%s" % [tc.move_vec, tc.aim_vec])
+	_check("touch.player_moves_aims_fires", p.velocity.y < -20.0 and p.aim_dir.x > 0.9 and n2 > _touch_fired0,
+		"vel=%s aim_dir=%s shots=%d" % [p.velocity, p.aim_dir, n2 - _touch_fired0])
+	# floating base follows the thumb when dragged past the radius
+	tc.handle(_sd(0, Vector2(60, 230)))
+	var o: Vector2 = tc.fingers[0]["origin"]
+	_check("touch.floating_stick_follows", absf(o.y - (230.0 + tc.STICK_R)) < 0.5, "origin=%s" % o)
+	# buttons with a third finger while both sticks stay held
+	var bs: Dictionary = tc.buttons()
+	tc.handle(_st(2, true, bs["overload"].get_center()))
+	var ov: bool = tc.overload_held
+	tc.handle(_st(2, false, bs["overload"].get_center()))
+	tc.handle(_st(2, true, bs["dash"].get_center()))
+	tc.handle(_st(2, false, bs["dash"].get_center()))
+	var sec0: int = p.secondary_index
+	tc.handle(_st(2, true, bs["swap"].get_center()))
+	tc.handle(_st(2, false, bs["swap"].get_center()))
+	_check("touch.buttons", ov and not tc.overload_held and tc._dash_q and tc._swap_q and tc.max_concurrent >= 3,
+		"overload=%s dash_q=%s swap_q=%s max_fingers=%d" % [ov, tc._dash_q, tc._swap_q, tc.max_concurrent])
+	tc.consume_dash()
+	tc.consume_swap()
+	# energy triangle: finger 3 drags toward the weapon vertex, finger 4 taps the DEFENSE chip
+	var w: Control = battle.hud.widget
+	var top: Vector2 = w.global_position + w.verts()[0] + Vector2(0, 3)
+	tc.handle(_st(3, true, w.global_position + w.verts()[2]))
+	tc.handle(_sd(3, top))
+	var wt: float = p.energy.target.x
+	tc.handle(_st(3, false, top))
+	tc.handle(_st(4, true, w.global_position + w.chip_rect(1).get_center()))
+	tc.handle(_st(4, false, w.global_position + w.chip_rect(1).get_center()))
+	_check("touch.energy_triangle", wt > 0.6 and p.energy.preset_name == "DEFENSE", "weapon_w=%.2f preset=%s" % [wt, p.energy.preset_name])
+	tc.handle(_st(0, false, Vector2.ZERO))
+	tc.handle(_st(1, false, Vector2.ZERO))
+	_check("touch.release_clears", tc.fingers.is_empty() and tc.move_vec == Vector2.ZERO and not tc.aim_active(), "fingers=%d" % tc.fingers.size())
+	tc.enabled = _touch_was
+	p.energy.apply_preset("BALANCED")
+	_touch_phase = 2
+
 func _check(name: String, ok: bool, info := "") -> void:
 	checks[name] = ok
 	print("[AUTOTEST] CHECK %-34s %s %s" % [name, "OK" if ok else "FAIL", info])
@@ -189,6 +272,9 @@ func _process(delta: float) -> void:
 		var sample := [GameManager.run_time, int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)), battle.field.chunks.size(), battle.field.asteroids.size()]
 		_node_samples.append(sample)
 		print("[AUTOTEST] t=%.0fs dist=%.0fm nodes=%d chunks=%d asteroids=%d enemies=%d" % [sample[0], battle.distance(), sample[1], sample[2], sample[3], battle.enemies.size()])
+	if t >= 0.5 and _touch_phase < 2:
+		_touch_tests(p)
+		return
 	var e: RefCounted = p.energy
 	# --- pilot ---
 	# weave across the band in the lower half; every 20s push ahead for 4s to test push-scrolling

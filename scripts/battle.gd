@@ -45,6 +45,7 @@ var emp_blasts := 0
 var shake_amount := 0.0
 var shake_rng := RandomNumberGenerator.new()
 var ended := false
+var touch: Control
 var _real_time := 0.0
 
 func _ready() -> void:
@@ -110,6 +111,10 @@ func _ready() -> void:
 	hud.set_script(preload("res://scripts/hud.gd"))
 	ui_layer.add_child(hud)
 	hud.bind(self)
+	touch = Control.new()
+	touch.set_script(preload("res://scripts/ui/touch_controls.gd"))
+	ui_layer.add_child(touch)
+	touch.setup(self)
 	perf = Label.new()
 	perf.set_script(preload("res://scripts/perf_overlay.gd"))
 	perf.battle = self
@@ -221,6 +226,7 @@ func _make_pause_menu() -> Control:
 	return _make_menu(tr("MENU_PAUSED"), tr("MENU_PAUSED_SUB"), [
 		["MENU_RESUME", tr("MENU_RESUME"), "play"], ["MENU_RESTART", tr("MENU_RESTART"), "restart"],
 		["MENU_REDUCE_FLASH", tr("MENU_REDUCE_FLASH") % tr("MENU_ON" if flash_on else "MENU_OFF"), "flash", true, flash_on],
+		["MENU_TOUCH", tr("MENU_TOUCH") % tr("MENU_ON" if touch.enabled else "MENU_OFF"), "build", true, touch.enabled],
 		["MENU_LANGUAGE", tr("MENU_LANGUAGE") % tr("LANG_NAME"), "lang"], ["MENU_QUIT", tr("MENU_QUIT"), "quit"]])
 
 func _make_menu(title: String, sub: String, actions: Array, results: Array = [], col: Color = Color("#49E6D4"), grade := "") -> Control:
@@ -233,8 +239,12 @@ func _make_menu(title: String, sub: String, actions: Array, results: Array = [],
 	return m
 
 func _on_menu(action: String) -> void:
-	if action == "MENU_REDUCE_FLASH" or action == "MENU_LANGUAGE":
-		if action == "MENU_REDUCE_FLASH":
+	if action == "MENU_REDUCE_FLASH" or action == "MENU_LANGUAGE" or action == "MENU_TOUCH":
+		if action == "MENU_TOUCH":
+			GameManager.force_touch = false
+			SaveManager.set_setting("touch_controls", "off" if touch.enabled else "on")
+			touch.refresh()
+		elif action == "MENU_REDUCE_FLASH":
 			SaveManager.set_setting("reduce_flash", not bool(SaveManager.settings.get("reduce_flash", false)))
 		else:
 			Loc.toggle_language()

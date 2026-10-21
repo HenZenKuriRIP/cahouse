@@ -274,7 +274,7 @@ func _chip(txt: String, col: Color, y: float, glyph: String) -> void:
 
 ## Synergy toast: holographic card slides in from the right, holds, slides out.
 func _draw_toasts() -> void:
-	var y := 58.0
+	var y := 64.0 if (battle and battle.touch and battle.touch.enabled) else 58.0
 	for t in toasts:
 		var id: String = t[0]
 		var age: float = t[1]

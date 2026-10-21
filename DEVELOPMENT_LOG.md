@@ -83,3 +83,11 @@
   2. 协同提示卡过宽且位于屏幕中部 → 按文字宽度自适应、移到顶栏下；能量三角底板加深加边；编辑器卡片文字压边 → 网格缩至 18px、卡片 26px 高并整体下移。
   3. 面板展开动画首帧切角多边形退化报 "triangulation failed" → 小尺寸时退化为矩形；结算距离单位本地化（米/m）；"武"顶点标签与预设名重叠 → 移到右侧。
 - 测试（真实结果）：`.godot` 删除后 headless 启动无报错；god autotest seed 3287 PASS 40/40，0 error/warning；非 god `--lang=en` seed 3287 本次也 PASS 40/40（此前已知 emp_crit 检查在非 god 下偶发失败，仍视为不稳定）。截图运行中仅有 Xvfb 环境下的 ALSA 无音频设备、vsync 提示两条环境错误。
+
+## 2026-10-21 安卓：触屏操控 + 调试 APK 导出（UTC+8）
+- 新增 `scripts/ui/touch_controls.gd`：浮动双摇杆（左移动、右瞄准+按住开火）、冲刺/超载(按住)/副武器(按住)/切换/编辑器/暂停按钮，多指同时操作；能量三角：手指 0 走 Godot 的触摸→鼠标模拟，其余手指由触屏层转发（拖动与预设芯片点按）。自动启用条件：`is_touchscreen_available()` 或 Android/iOS；存档项 `touch_controls`（auto/on/off），暂停菜单开关；`-- --touch` 强制开启。读取 `get_display_safe_area()` 换算到逻辑坐标作为边距。布局避开顶栏(0–40)与底部 HUD 卡片(404+)。
+- 标题页触屏显示“轻触开始”，点按语言行切换语言。启用 `input_devices/pointing/emulate_mouse_from_touch`，菜单与编辑器拖放通过模拟鼠标工作。
+- autotest 新增 7 项触屏检查（直接调用 `TouchControls.handle()` 注入 InputEventScreenTouch/Drag，两指同时按住双摇杆 + 第三指按钮 + 第三/四指能量三角）：47/47 通过。
+- Xvfb 截图 `docs/screenshots/touch_hud.png` 走真实输入路径：`Input.parse_input_event` 以窗口像素坐标注入 3 个手指，日志确认换算到逻辑坐标正确（move=(0.545,-0.727)，aim 激活，超载按住）。
+- 导出：Temurin JDK 17、Android cmdline-tools（platform-tools、build-tools 35.0.1/36.0.0、android-35/36）、官方 4.7.2 导出模板；开启 ETC2/ASTC 导入（导出强制要求）；`export_presets.cfg` Android 预设；自适应图标 432px 前景/背景 + 192px 主图标。APK 58,384,529 字节，apksigner v2/v3 校验通过。
+- 未在真机运行；安全区仅作用于触屏层（HUD 顶栏本身未下移）。

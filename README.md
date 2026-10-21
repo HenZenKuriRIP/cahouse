@@ -72,3 +72,20 @@ godot --headless --path . -- --autotest=32 --timescale=6 [--god] [--seed=123]
 - 重新生成截图（需要显示环境，例如 Xvfb）：
   `xvfb-run -a godot --rendering-driver opengl3 --resolution 540x960 --path . -- --shots=battle --autotest=999 --god --goal=2600 --timescale=2 --seed=3287`
   （另有 `--shots=title`、`--shots=gameover`）
+
+## 安卓安装测试步骤
+> 现状：调试 APK 已在 Linux 盒子上用 Godot 4.7.2 无头导出并通过 apksigner 校验，**尚未在真机上运行过**。
+
+1. 拿到 `void-signal-debug.apk`（包名 `com.voidsignal.game`，arm64-v8a + armeabi-v7a，minSdk 24 / targetSdk 36，渲染器 Compatibility/OpenGL ES 3.0）。
+2. 手机端允许安装未知来源应用：设置 → 安全/隐私 →“安装未知应用”，给用来打开 APK 的应用（文件管理器/浏览器）授权；或使用 adb。
+3. adb 安装（推荐，便于看日志）：
+   - 手机打开“开发者选项”（设置 → 关于手机 → 连点“版本号”7 次）→ 打开“USB 调试”。
+   - 电脑：`adb devices` 确认设备，然后 `adb install -r void-signal-debug.apk`（`-r` 覆盖安装）。
+   - 若提示签名冲突：`adb uninstall com.voidsignal.game` 后重装（调试签名为盒子上生成的 debug.keystore）。
+4. 查看日志：`adb logcat -s godot`（脚本错误、[AUTOTEST]/print 输出都在这里）。
+5. 触屏操作：左下半屏任意处按下=浮动移动摇杆；右侧按下=浮动瞄准摇杆，按住自动开火主武器；右侧竖排按钮：切换副武器 / 副武器(按住) / 超载(按住) / 冲刺；右上：舰船编辑器、暂停。能量三角可直接拖动，四个预设芯片可点按。暂停菜单“触屏操控”开关可开关触屏层（桌面默认隐藏，可用 `-- --touch` 强制显示）。
+
+### 重新导出 APK（盒子环境）
+- JDK 17：`/opt/dl/jdk`（Temurin 17.0.20.1）；Android SDK：`/opt/dl/sdk`（platform-tools、build-tools 35.0.1 + 36.0.0、platforms android-35/36）；导出模板 4.7.2.stable（官方 .tpz 中的 android_*）；调试密钥 `/opt/dl/debug.keystore`（androiddebugkey/android）。编辑器设置已写入 `~/.config/godot/editor_settings-4.7.tres`。
+- `godot47 --headless --path . --import && godot47 --headless --path . --export-debug "Android" build/void-signal-debug.apk`
+- 校验：`apksigner verify --verbose build/void-signal-debug.apk`、`aapt dump badging build/void-signal-debug.apk`

@@ -34,6 +34,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.physical_keycode == KEY_L:
 		Loc.toggle_language()
 		return
+	if event is InputEventMouseButton and event.pressed and event.position.y > 424.0 and event.position.y < 450.0:
+		Loc.toggle_language() # tap the language line (touch is emulated as mouse)
+		return
 	var go: bool = (event is InputEventKey and event.pressed and not event.echo) or (event is InputEventMouseButton and event.pressed) or (event is InputEventJoypadButton and event.pressed)
 	if go:
 		_leaving = 0.0
@@ -96,12 +99,13 @@ func _draw() -> void:
 	var pa := 1.0 if K.reduce_flash() else (0.55 + 0.45 * absf(sin(_t * 2.4)))
 	if _leaving >= 0.0:
 		pa = 1.0 if int(_leaving * 20) % 2 == 0 else 0.3
-	var ptxt := tr("TITLE_PRESS")
+	var touch: bool = preload("res://scripts/ui/touch_controls.gd").should_enable()
+	var ptxt := tr("TITLE_TAP" if touch else "TITLE_PRESS")
 	var pw := K.text_width(ptxt) + 24
 	var pr := Rect2(floorf((W - pw) / 2.0), 384, pw, 20)
 	K.chamfer_fill(self, pr, 3, Color(K.ACCENT, 0.12 * pa))
 	K.chamfer_line(self, pr, 3, Color(K.ACCENT, pa))
 	K.icon(self, "play", pr.position + Vector2(7, 7), Color(K.ACCENT, pa))
 	K.text(self, pr.position + Vector2(17, 14), ptxt, Color(K.TEXT, pa))
-	K.text(self, Vector2(0, 440), tr("TITLE_LANG_HINT"), K.DIM, K.FS_BODY, HORIZONTAL_ALIGNMENT_CENTER, W)
+	K.text(self, Vector2(0, 440), tr("TITLE_LANG_TAP" if touch else "TITLE_LANG_HINT"), K.DIM, K.FS_BODY, HORIZONTAL_ALIGNMENT_CENTER, W)
 	K.text(self, Vector2(0, 462), "v0.3 · PHASE 2B · © VOID SIGNAL", Color(K.TEXT, 0.3), K.FS_BODY, HORIZONTAL_ALIGNMENT_CENTER, W)

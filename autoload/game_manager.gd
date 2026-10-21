@@ -11,6 +11,7 @@ var autotest_seconds: float = 0.0
 var autotest_god: bool = false
 var shots_mode: bool = false
 var shots_set: String = ""
+var force_touch: bool = false # --touch: force the touch layer on (desktop testing/screenshots)
 var _seed_from_cli: bool = false
 var _json_cache: Dictionary = {}
 
@@ -19,6 +20,8 @@ func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--autotest="):
 			autotest_seconds = float(a.split("=")[1])
+		elif a == "--touch":
+			force_touch = true
 		elif a.begins_with("--shots="):
 			shots_mode = true
 			shots_set = a.split("=")[1]

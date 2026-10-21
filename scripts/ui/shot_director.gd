@@ -55,6 +55,12 @@ func _process(delta: float) -> void:
 		return
 	if battle == null:
 		return
+	if GameManager.shots_set == "touch":
+		if GameManager.run_time > 7.0 and not done.has("touch_hud"):
+			_busy = true
+			await _touch_shot()
+			get_tree().quit()
+		return
 	if GameManager.shots_set == "gameover":
 		if GameManager.run_time > 9.0 and battle.player.alive:
 			battle.player.god = false
@@ -114,3 +120,30 @@ func _process(delta: float) -> void:
 		await _wait(2.4)
 		await shot("victory")
 		get_tree().quit()
+
+## Real input path: events are injected in window pixels through Input.parse_input_event, so the stretch
+## transform (window 540x960 -> logical 270x480) is exercised exactly as on a device.
+func _touch_shot() -> void:
+	var tc: Control = battle.touch
+	var sc := Vector2(DisplayServer.window_get_size()) / Vector2(270, 480)
+	var evs := [[0, true, Vector2(58, 330)], [1, true, Vector2(184, 318)]]
+	for e in evs:
+		var ev := InputEventScreenTouch.new()
+		ev.index = e[0]
+		ev.pressed = e[1]
+		ev.position = e[2] * sc
+		Input.parse_input_event(ev)
+	await get_tree().process_frame
+	for e in [[0, Vector2(70, 314)], [1, Vector2(204, 308)]]:
+		var d := InputEventScreenDrag.new()
+		d.index = e[0]
+		d.position = e[1] * sc
+		Input.parse_input_event(d)
+	var ov := InputEventScreenTouch.new()
+	ov.index = 2
+	ov.pressed = true
+	ov.position = tc.buttons()["overload"].get_center() * sc
+	Input.parse_input_event(ov)
+	await _wait(0.5)
+	print("[SHOT] touch state: fingers=%d move=%s aim=%s aim_active=%s overload=%s insets=%s" % [tc.fingers.size(), tc.move_vec, tc.aim_vec, tc.aim_active(), tc.overload_held, tc.insets])
+	await shot("touch_hud")

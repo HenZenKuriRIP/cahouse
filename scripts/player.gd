@@ -120,18 +120,26 @@ func _process(delta: float) -> void:
 		want_overload = auto.get("overload", false)
 		auto["dash"] = false
 	else:
+		var tc: Control = battle.touch if battle else null
+		var touch_on: bool = tc != null and tc.enabled
 		move = InputManager.get_move_vector()
+		if touch_on and tc.move_vec != Vector2.ZERO:
+			move = tc.move_vec
 		var stick := InputManager.get_stick_aim()
-		if stick != Vector2.ZERO:
+		var touch_aim: bool = touch_on and tc.aim_active()
+		if touch_aim:
+			aim_point = global_position + tc.aim_vec * 120.0
+		elif stick != Vector2.ZERO:
 			aim_point = global_position + stick * 120.0
-		elif not InputManager.using_gamepad:
+		elif not InputManager.using_gamepad and not touch_on:
 			aim_point = get_global_mouse_position()
 		var blocked: bool = battle.ui_blocks_fire()
-		want_fire = Input.is_action_pressed("fire") and not blocked
-		want_secondary = Input.is_action_pressed("fire_secondary") and not blocked
-		want_dash = Input.is_action_just_pressed("dash")
-		want_overload = Input.is_action_pressed("overload")
-		if Input.is_action_just_pressed("cycle_secondary"):
+		# on touch, the emulated mouse must not fire: the right stick fires instead
+		want_fire = (Input.is_action_pressed("fire") and not blocked and not touch_on) or touch_aim
+		want_secondary = (Input.is_action_pressed("fire_secondary") and not blocked) or (touch_on and tc.secondary_held)
+		want_dash = Input.is_action_just_pressed("dash") or (touch_on and tc.consume_dash())
+		want_overload = Input.is_action_pressed("overload") or (touch_on and tc.overload_held)
+		if Input.is_action_just_pressed("cycle_secondary") or (touch_on and tc.consume_swap()):
 			cycle_secondary()
 		for i in 4:
 			if Input.is_action_just_pressed("preset_%d" % (i + 1)):
