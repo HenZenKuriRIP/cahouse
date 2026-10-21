@@ -1,0 +1,31 @@
+[RUNNER] http://127.0.0.1:4791/index.html?autotest=1&god=1&timescale=6&quality=low viewport=540x1200
+[AUTOTEST] START seed=3287 timescale=6 god=true gpu="ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)" quality=low viewport=540x1200
+[AUTOTEST] CHECK boot_models OK glb=18 tris=11966
+[AUTOTEST] CHECK render_frame OK draw_calls=69 tris=20218
+[AUTOTEST] CHECK state_playing OK PLAYING
+[AUTOTEST] CHECK movement OK right=53.4 left=-97.8
+[AUTOTEST] CHECK movement_forward OK rel_y 142 -> 104
+[AUTOTEST] CHECK dash OK dashes=1
+[AUTOTEST] CHECK firing OK max_live_projectiles=16 instanced_bullets=5
+[AUTOTEST] CHECK weapons_all_4 OK gravity_bomb:2 missile_swarm:6 pulse_cannon:29 emp_launcher:3
+[AUTOTEST] CHECK projectile_pool_reuse OK pool_created=17
+[AUTOTEST] CHECK synergies_active OK gravity_missile,emp_crit,ion_vortex
+[AUTOTEST] CHECK synergy_gravity_missile OK n=35
+[AUTOTEST] CHECK synergy_emp_crit OK n=77
+[AUTOTEST] CHECK synergy_ion_vortex OK n=8 wells=2
+[AUTOTEST] CHECK energy_presets OK W 1.45>1.00 S 1.45>1.00 E 1.53>1.00
+[AUTOTEST] CHECK overheat_disables OK disabled=shield_gen locked=true heat_reset=55
+[AUTOTEST] CHECK overload OK total=1.4 mult 1.00->1.23 overheats=1
+[AUTOTEST] CHECK overload_unlock OK heat=0
+[AUTOTEST] CHECK touch_dual_stick OK mx=1.00 aimOn=true moved=95.5 shots=12 events={"down":3,"move":2,"up":2}
+[AUTOTEST] CHECK touch_dash_button OK dashes 1->2
+[AUTOTEST] CHECK touch_release OK 
+[AUTOTEST] CHECK language_switch OK en:"HULL" -> zh:"船体" -> en
+[AUTOTEST] CHECK pause_resume OK 
+[AUTOTEST] CHECK chunks_bounded OK max_chunks=5 max_rocks=35 destroyed=54 ore_det=24 ore_chain=2 meteors=11 scrap=9
+[AUTOTEST] CHECK enemies OK spawned=191 kills=160 max_alive=21 culled=13
+[AUTOTEST] CHECK win OK dist=7200 t=135.5s grade=A real=34.1s
+[AUTOTEST] CHECK lose OK hull=0 modules_lost=2
+[AUTOTEST] RESULT PASS 26/26 sim_steps=8487 frames=279 avg_fps=10.7
+[AUTOTEST] CHECK touch_cdp_multitouch OK moved=122.6 shots=62 events={"down":5,"move":18,"up":2}
+[RUNNER] PASS in-page=true checks=26 fails=[] cdp_touch=OK console_errors=0
