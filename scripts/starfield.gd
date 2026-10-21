@@ -4,6 +4,8 @@ const W := 270.0
 const H := 480.0
 var stars: Array = [] # [Vector2, layer]
 var camera: Camera2D
+var drift := Vector2.ZERO # used when there is no camera (title screen)
+var drift_speed := Vector2(0, -30)
 const FACTORS := [0.1, 0.3, 0.6]
 const COLORS := [Color("#2a3558"), Color("#6b7aa8"), Color("#EAF4FF")]
 
@@ -15,12 +17,13 @@ func setup(cam: Camera2D, seed_value: int) -> void:
 		stars.append([Vector2(rng.randf() * W, rng.randf() * H), mini(2, i % 7 / 3)])
 	stars.append([Vector2(0, 0), 0])
 
-func _process(_d: float) -> void:
+func _process(d: float) -> void:
+	drift += drift_speed * d
 	queue_redraw()
 
 func _draw() -> void:
 	draw_rect(Rect2(0, 0, W, H), Color("#080C18"))
-	var cp := camera.get_screen_center_position() if camera else Vector2.ZERO
+	var cp := camera.get_screen_center_position() if camera else drift
 	for s in stars:
 		var layer: int = s[1]
 		var p: Vector2 = s[0] - cp * FACTORS[layer]

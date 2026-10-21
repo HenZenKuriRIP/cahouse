@@ -9,6 +9,8 @@ var run_time: float = 0.0
 var sector_name: String = "SECTOR 01 // OUTER RIM"
 var autotest_seconds: float = 0.0
 var autotest_god: bool = false
+var shots_mode: bool = false
+var shots_set: String = ""
 var _seed_from_cli: bool = false
 var _json_cache: Dictionary = {}
 
@@ -17,6 +19,9 @@ func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--autotest="):
 			autotest_seconds = float(a.split("=")[1])
+		elif a.begins_with("--shots="):
+			shots_mode = true
+			shots_set = a.split("=")[1]
 		elif a == "--god":
 			autotest_god = true
 		elif a.begins_with("--seed="):

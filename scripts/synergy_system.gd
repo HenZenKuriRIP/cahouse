@@ -38,7 +38,7 @@ func trigger(id: String, pos: Vector2) -> void:
 	EventBus.synergy_triggered.emit(id, pos)
 	if _text_cd[id] <= 0.0:
 		_text_cd[id] = 1.2
-		battle.spawn_float_text(pos + Vector2(0, -14), tr("SYN_" + id.to_upper()), PixelLib.C_CYAN if id != "ion_vortex" else PixelLib.C_VIOLET, 1.2)
+		battle.spawn_float_text(pos + Vector2(0, -14), tr("SYN_" + id.to_upper()), PixelLib.C_CYAN if id != "ion_vortex" else PixelLib.C_VIOLET, 1.2, "synergy")
 		battle.spawn_explosion(pos, PixelLib.C_CYAN, 10)
 
 func on_player_hit(p: Node2D, e: Node2D) -> void:

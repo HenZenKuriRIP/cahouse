@@ -223,7 +223,7 @@ func take_damage(amount: float, from_pos: Vector2) -> void:
 		if lost != "":
 			modules_lost.append(lost)
 			battle.spawn_explosion(global_position + local_dir.normalized() * radius, PixelLib.C_GOLD, 14)
-			battle.spawn_float_text(global_position + Vector2(0, -16), tr("FT_MODULE_LOST") % tr("MOD_" + lost.to_upper()), PixelLib.C_RED, 1.4)
+			battle.spawn_float_text(global_position + Vector2(0, -16), tr("FT_MODULE_LOST") % tr("MOD_" + lost.to_upper()), PixelLib.C_RED, 1.4, "alert")
 			EventBus.module_destroyed.emit(lost)
 			if lost == "core" or lost == "cockpit":
 				hull = 0.0

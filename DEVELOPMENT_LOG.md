@@ -73,3 +73,13 @@
 
 ### 未验证
 - 无显示器：竖屏 HUD/编辑器/菜单的实际视觉、中文字体在 2× 缩放下的清晰度、鼠标拖放、语言切换按钮点击均**未人工目视**（语言切换经 API 测试）。
+
+## 2026-10-21 UI/UX 全面重做（UTC+8）
+- 新增 `docs/UI_STYLE_GUIDE.md`（色板/网格/字号/9-slice 切角面板/图标/按钮状态/动效/HUD 层级/无障碍）。
+- 新 UI 套件 `scripts/ui/`：ui_kit（绘制原语、21 个 7×7 像素图标、分段条、环形冷却、切角面板）、ui_theme（程序生成 9-slice StyleBoxTexture + Theme）、pixel_button（图标按钮/开关/手柄焦点支架）、holo_overlay（扫描线+暗角+闪烁 shader，减少闪烁时关闭闪烁）、shot_director（截图导演）。
+- 重做：HUD、能量三角、暂停菜单、舰船编辑器、胜利/失败结算（数值滚动+评级）、浮动文字；新增标题画面 `scenes/title.tscn`（现为主场景；autotest 直接跳入战斗）。
+- 截图：Godot 4.7.2 + Xvfb + opengl3(llvmpipe) 真机渲染，`--shots=title|battle|gameover`，输出 540×960（2× 最近邻）到 `docs/screenshots/`。做了 3 轮检查修正：
+  1. 发现 CanvasLayer 阻断根窗口 Theme 传递 → 按钮使用默认样式/16px 字体、溢出面板；改为在菜单节点上直接设置 `Loc.ui_theme`。
+  2. 协同提示卡过宽且位于屏幕中部 → 按文字宽度自适应、移到顶栏下；能量三角底板加深加边；编辑器卡片文字压边 → 网格缩至 18px、卡片 26px 高并整体下移。
+  3. 面板展开动画首帧切角多边形退化报 "triangulation failed" → 小尺寸时退化为矩形；结算距离单位本地化（米/m）；"武"顶点标签与预设名重叠 → 移到右侧。
+- 测试（真实结果）：`.godot` 删除后 headless 启动无报错；god autotest seed 3287 PASS 40/40，0 error/warning；非 god `--lang=en` seed 3287 本次也 PASS 40/40（此前已知 emp_crit 检查在非 god 下偶发失败，仍视为不稳定）。截图运行中仅有 Xvfb 环境下的 ALSA 无音频设备、vsync 提示两条环境错误。

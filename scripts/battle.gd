@@ -99,6 +99,9 @@ func _ready() -> void:
 	ui_layer.layer = 10
 	ui_layer.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(ui_layer)
+	var holo := ColorRect.new()
+	holo.set_script(preload("res://scripts/ui/holo_overlay.gd"))
+	ui_layer.add_child(holo)
 	var edge := Control.new()
 	edge.set_script(preload("res://scripts/edge_fx.gd"))
 	edge.battle = self
@@ -116,6 +119,13 @@ func _ready() -> void:
 	ui_layer.add_child(builder)
 
 	EventBus.player_died.connect(_on_player_died)
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--goal="):
+			distance_goal = float(a.split("=")[1])
+	if GameManager.shots_mode:
+		var sd: Node = preload("res://scripts/ui/shot_director.gd").new()
+		add_child(sd)
+		sd.setup_battle(self)
 	if GameManager.autotest_seconds > 0.0:
 		driver = AutotestDriverScript.new()
 		add_child(driver)
@@ -209,15 +219,15 @@ func _toggle_pause() -> void:
 func _make_pause_menu() -> Control:
 	var flash_on := bool(SaveManager.settings.get("reduce_flash", false))
 	return _make_menu(tr("MENU_PAUSED"), tr("MENU_PAUSED_SUB"), [
-		["MENU_RESUME", tr("MENU_RESUME")], ["MENU_RESTART", tr("MENU_RESTART")],
-		["MENU_REDUCE_FLASH", tr("MENU_REDUCE_FLASH") % tr("MENU_ON" if flash_on else "MENU_OFF")],
-		["MENU_LANGUAGE", tr("MENU_LANGUAGE") % tr("LANG_NAME")], ["MENU_QUIT", tr("MENU_QUIT")]])
+		["MENU_RESUME", tr("MENU_RESUME"), "play"], ["MENU_RESTART", tr("MENU_RESTART"), "restart"],
+		["MENU_REDUCE_FLASH", tr("MENU_REDUCE_FLASH") % tr("MENU_ON" if flash_on else "MENU_OFF"), "flash", true, flash_on],
+		["MENU_LANGUAGE", tr("MENU_LANGUAGE") % tr("LANG_NAME"), "lang"], ["MENU_QUIT", tr("MENU_QUIT"), "quit"]])
 
-func _make_menu(title: String, sub: String, actions: Array) -> Control:
+func _make_menu(title: String, sub: String, actions: Array, results: Array = [], col: Color = Color("#49E6D4"), grade := "") -> Control:
 	var m := Control.new()
 	m.set_script(MenuPanel)
 	ui_layer.add_child(m)
-	m.build(title, sub, actions)
+	m.build(title, sub, actions, results, col, grade)
 	m.chosen.connect(_on_menu)
 	m.focus_first()
 	return m
@@ -237,6 +247,9 @@ func _on_menu(action: String) -> void:
 		"MENU_RESTART":
 			get_tree().paused = false
 			get_tree().reload_current_scene()
+		"MENU_TITLE":
+			get_tree().paused = false
+			get_tree().change_scene_to_file("res://scenes/title.tscn")
 		"MENU_QUIT":
 			get_tree().quit()
 
@@ -252,7 +265,7 @@ func _end(won: bool) -> void:
 	else:
 		EventBus.run_lost.emit()
 	print("[VOID SIGNAL] run %s at %.1fs distance=%.0fm kills=%d" % ["WON" if won else "LOST", GameManager.run_time, distance(), GameManager.kills])
-	if GameManager.autotest_seconds > 0.0:
+	if GameManager.autotest_seconds > 0.0 and not GameManager.shots_mode:
 		_autotest_finish("WON" if won else "LOST")
 		return
 	if won:
@@ -261,7 +274,16 @@ func _end(won: bool) -> void:
 	var title := tr("END_WON_TITLE") if won else tr("END_LOST_TITLE")
 	var rt := int(GameManager.run_time)
 	var sub: String = tr("END_WON_SUB") % [int(distance()), GameManager.kills] if won else tr("END_LOST_SUB") % [int(distance()), rt / 60, rt % 60, GameManager.kills]
-	end_menu = _make_menu(title, sub, [["MENU_RESTART", tr("MENU_RESTART")], ["MENU_QUIT", tr("MENU_QUIT")]])
+	var syn_total := 0
+	for k in synergy.counters:
+		syn_total += int(synergy.counters[k])
+	var results := [["distance", tr("RES_DISTANCE"), distance(), tr("RES_FMT_M")], ["time", tr("RES_TIME"), 0.0, "%d:%02d" % [rt / 60, rt % 60]],
+		["kills", tr("RES_KILLS"), float(GameManager.kills), "%d"], ["scrap", tr("RES_SCRAP"), float(GameManager.scrap), "%d"],
+		["synergy", tr("RES_SYNERGY"), float(syn_total), "%d"], ["module", tr("RES_MODULES"), float(player.modules_lost.size()), "%d"]]
+	var score := distance() / 100.0 + GameManager.kills * 0.5 + syn_total * 0.2
+	var grade := "S" if score > 260 else ("A" if score > 180 else ("B" if score > 100 else "C"))
+	end_menu = _make_menu(title, sub, [["MENU_RESTART", tr("MENU_RESTART"), "restart"], ["MENU_TITLE", tr("MENU_TITLE"), "play"], ["MENU_QUIT", tr("MENU_QUIT"), "quit"]],
+		results, Color("#49E6D4") if won else Color("#FF5268"), grade)
 
 # ---- spawning API used by systems ----
 func spawn_projectile(pos: Vector2, vel: Vector2, dmg: float, life: float, team: int, col: Color, crit: bool, extra: Dictionary = {}) -> void:
@@ -332,7 +354,7 @@ func spawn_explosion(pos: Vector2, col: Color, amount: int) -> void:
 func spawn_dash_trail(pos: Vector2, dir: Vector2) -> void:
 	spawn_explosion(pos - dir * 6.0, PixelLib.C_CYAN, 8)
 
-func spawn_float_text(pos: Vector2, t: String, col: Color, life := 0.6) -> void:
+func spawn_float_text(pos: Vector2, t: String, col: Color, life := 0.6, style := "normal") -> void:
 	if fx_layer.get_child_count() > 150:
 		return
 	var d: Node2D = FloatTextScript.new()
@@ -340,11 +362,12 @@ func spawn_float_text(pos: Vector2, t: String, col: Color, life := 0.6) -> void:
 	d.color = col
 	d.life = life
 	d.max_life = life
+	d.style = style
 	d.global_position = pos
 	fx_layer.add_child(d)
 
 func spawn_damage_number(pos: Vector2, amount: float, crit: bool) -> void:
-	spawn_float_text(pos + Vector2(0, -8), str(int(amount)) + ("!" if crit else ""), PixelLib.C_GOLD if crit else PixelLib.C_WHITE)
+	spawn_float_text(pos + Vector2(0, -8), str(int(amount)) + ("!" if crit else ""), PixelLib.C_GOLD if crit else PixelLib.C_WHITE, 0.7 if crit else 0.5, "crit" if crit else "normal")
 
 func shake(amount: float) -> void:
 	if bool(SaveManager.settings.get("screen_shake", true)):

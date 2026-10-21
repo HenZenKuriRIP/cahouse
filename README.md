@@ -65,3 +65,10 @@ godot --headless --path . -- --autotest=32 --timescale=6 [--god] [--seed=123]
 
 ## 导出注意
 `strings.csv` 与字体使用 `importer="keep"`（原样导出、运行时读取）。导出预设需在“非资源文件”过滤中加入 `*.json, *.csv, *.woff2`。
+
+## UI（复古未来像素界面）
+- 风格规范见 `docs/UI_STYLE_GUIDE.md`，真实截图见 `docs/screenshots/`（title / hud_combat / overload / synergy_toast / energy_triangle / pause_zh / pause_en / builder / victory / gameover）。
+- 启动进入标题画面：任意键开始，L 切换中/英。
+- 重新生成截图（需要显示环境，例如 Xvfb）：
+  `xvfb-run -a godot --rendering-driver opengl3 --resolution 540x960 --path . -- --shots=battle --autotest=999 --god --goal=2600 --timescale=2 --seed=3287`
+  （另有 `--shots=title`、`--shots=gameover`）

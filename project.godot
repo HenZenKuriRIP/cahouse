@@ -4,7 +4,7 @@ config_version=5
 
 config/name="VOID SIGNAL"
 config/description="虚空信号 - pixel space combat roguelite"
-run/main_scene="res://scenes/battle.tscn"
+run/main_scene="res://scenes/title.tscn"
 config/features=PackedStringArray("4.7")
 config/icon="res://assets/icon.png"
 

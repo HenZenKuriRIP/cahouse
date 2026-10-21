@@ -48,6 +48,8 @@ func _load_csv() -> void:
 	for t in trs:
 		TranslationServer.add_translation(t)
 
+var ui_theme: Theme
+
 func _install_font() -> void:
 	if not FileAccess.file_exists(FONT_PATH):
 		push_error("Missing font: " + FONT_PATH)
@@ -62,6 +64,8 @@ func _install_font() -> void:
 	font.multichannel_signed_distance_field = false
 	ThemeDB.fallback_font = font
 	ThemeDB.fallback_font_size = FONT_SIZE
+	ui_theme = load("res://scripts/ui/ui_theme.gd").build(font)
+	get_tree().root.theme = ui_theme
 
 func set_language(lang: String, save := true) -> void:
 	if not (lang in LANGS):

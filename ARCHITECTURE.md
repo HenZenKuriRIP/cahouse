@@ -139,3 +139,11 @@ graph TD
 - **字体**：`FontFile.data = 文件字节`，antialiasing=NONE、hinting=NONE、subpixel=DISABLED，设为 `ThemeDB.fallback_font`（大小 12），所有 Label/Button/draw_string 共用。
 - **滚动模型**：`battle.scroll_y` 每帧减少 `base_scroll_speed*delta`，玩家同步上移（玩家速度为“屏幕系”）；玩家越过推进线（scroll_y-100）时镜头追上 → 前推加速。`distance() = -scroll_y`。`constrain_player()` 提供水平带（±118）与竖直窗口的软墙。
 - **区块**：区块 k 覆盖 y∈[-(k+1)·480, -k·480]，RNG 种子 `hash([run_seed+101, k])`，同种子同地形；保持前方 2 个区块，区块顶边低于视口下沿 260px 时整体释放；漂离的碎片/陨石/拾取物同样按下沿剔除。敌人落到视口下方 120px 外被回收（不计击杀）。
+
+## UI 层（scripts/ui/）
+- `ui_kit.gd`：静态绘制原语（色板常量、像素图标、切角面板、分段条、环、文本阴影/描边、缓动）。所有自绘 UI（hud/energy_widget/ship_builder/menu_panel/title/float_text）都调用它。
+- `ui_theme.gd`：程序生成 16×16 切角图 → StyleBoxTexture → Theme，存在 `Loc.ui_theme` 并设到根窗口；CanvasLayer 下的 Control（菜单）需显式 `theme = Loc.ui_theme`。
+- `pixel_button.gd`：Button 子类，图标槽 + 焦点支架 + 开关滑块。
+- `holo_overlay.gd`：全屏 shader 叠层（扫描线/暗角/闪烁）。
+- `shot_director.gd`：`--shots=` 时驱动游戏进入各状态并截图视口。
+- 主场景：`scenes/title.tscn` → `scenes/battle.tscn`；暂停/结算菜单可返回标题。
