@@ -35,7 +35,7 @@ for (const [name, vp] of Object.entries(sizes)) {
   await page.evaluate(() => { const g = window.VS, b = g.battle, p = b.player; const mk = window.__mkEnemy; void mk; });
   await page.evaluate(() => { const g = window.VS; g.spawnDummies(5); window.__syn = setInterval(() => { const b = g.battle, p = b.player; const t = b.enemies[2] || b.enemies[0]; for (const e of b.enemies) { e.stunTimer = 99; e.y = p.y - 110; }
     const k = Math.floor(b.time / 1.3); const sw = k !== window.__sw; window.__sw = k; g.override = { mx: 0, my: 0, ax: t ? t.x : p.x, ay: t ? t.y : p.y - 110, aimActive: true, fire: true, fire2: true, dash: false, overload: false, swap: sw }; }, 30); });
-  await page.evaluate(() => window.VS.setTimeScale(2)); await simUntil(() => window.VS.battle.synergy.counts.ion_vortex > 0 && window.VS.battle.wells.some((w) => w.ion), 180000); await page.evaluate(() => window.VS.setTimeScale(1)); await settle(300); await shot("synergy");
+  await page.evaluate(() => window.VS.setTimeScale(2)); await simUntil(() => window.VS.battle.synergy.counts.ion_vortex > 0 && window.VS.battle.wells.some((w) => w.ion), 240000).catch(() => console.log("[WARN] ion vortex not reached; synergy shot taken anyway")); await page.evaluate(() => window.VS.setTimeScale(1)); await settle(300); await shot("synergy");
   await page.evaluate(() => { clearInterval(window.__syn); const g = window.VS; for (const e of [...g.battle.enemies]) g.battle.removeEnemy(e); g.battle.directorPaused = false; });
   await page.evaluate(PILOT);
   // pause zh / en
