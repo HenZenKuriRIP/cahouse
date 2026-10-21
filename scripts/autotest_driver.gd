@@ -15,6 +15,9 @@ var _combo_phase := 0
 var _combo_pos := Vector2.ZERO
 var _pulse_t := 0.0
 var _mods_destroyed := 0
+var _push_time := 0.0
+var _node_samples: Array = [] # [run_time, nodes, chunks, asteroids]
+var _sample_t := 0.0
 
 func setup(b: Node) -> void:
 	battle = b
@@ -23,9 +26,10 @@ func setup(b: Node) -> void:
 		_mods_destroyed += 1
 		print("[AUTOTEST] module destroyed: %s at t=%.1f" % [id, GameManager.run_time]))
 	_ship_validation_tests()
+	_i18n_tests()
 	# fixture: an isolated ore cluster far from the player to exercise the chain reaction
 	var fld: Node2D = battle.field
-	var base := Vector2(420, 250)
+	var base := Vector2(-70, -330)
 	var o1: Node2D = fld._spawn(base, 10.0, true, Vector2.ZERO)
 	fld._spawn(base + Vector2(30, 0), 10.0, true, Vector2.ZERO)
 	fld._spawn(base + Vector2(60, 10), 10.0, true, Vector2.ZERO)
@@ -44,7 +48,7 @@ func _ship_validation_tests() -> void:
 	var a: RefCounted = m.duplicate_model()
 	a.remove(Vector2i(3, 3))
 	a.revalidate()
-	_check("ship.no_core_invalid", not a.is_valid() and "缺少能量核心 (NO CORE)" in a.errors, str(a.errors))
+	_check("ship.no_core_invalid", not a.is_valid() and "ERR_NO_CORE" in a.errors, str(a.errors))
 	var b: RefCounted = m.duplicate_model()
 	b.place(Vector2i(0, 0), "armor")
 	b.revalidate()
@@ -52,11 +56,11 @@ func _ship_validation_tests() -> void:
 	var c: RefCounted = m.duplicate_model()
 	c.place(Vector2i(1, 3), "armor")
 	c.revalidate()
-	_check("ship.exhaust_blocked_invalid", "主推进器尾焰被遮挡 (EXHAUST BLOCKED)" in c.errors, str(c.errors))
+	_check("ship.exhaust_blocked_invalid", "ERR_EXHAUST" in c.errors, str(c.errors))
 	var d: RefCounted = m.duplicate_model()
 	d.remove(Vector2i(2, 3))
 	d.revalidate()
-	_check("ship.no_thrust_invalid", "缺少有效主推进器 (NO THRUST)" in d.errors, str(d.errors))
+	_check("ship.no_thrust_invalid", "ERR_NO_THRUST" in d.errors, str(d.errors))
 	var e: RefCounted = m.duplicate_model()
 	for i in 4:
 		e.place(Vector2i(i, 6), "shield_gen")
@@ -103,6 +107,59 @@ func _ship_validation_tests() -> void:
 	_check("builder.apply_rejects_invalid", not bl.apply())
 	bl.visible = false
 
+func _i18n_tests() -> void:
+	var prev: String = Loc.language
+	Loc.set_language("en", false)
+	var en_hull := tr("HUD_HULL")
+	var en_menu := tr("MENU_RESUME")
+	Loc.set_language("zh", false)
+	var zh_hull := tr("HUD_HULL")
+	var zh_menu := tr("MENU_RESUME")
+	_check("i18n.en_loaded", en_hull == "HULL" and en_menu == "RESUME", "%s/%s" % [en_hull, en_menu])
+	_check("i18n.zh_loaded", zh_hull == "船体" and zh_menu == "继续", "%s/%s" % [zh_hull, zh_menu])
+	_check("i18n.switch_changes_text", en_hull != zh_hull and en_menu != zh_menu)
+	# every key used in code (tr-literal keys) + data-driven dynamic keys must exist in both languages
+	var used := {}
+	var re := RegEx.new()
+	re.compile("tr\\(\"([A-Z][A-Z0-9_]+)\"\\)")
+	for dir in ["res://scripts", "res://autoload"]:
+		for f in DirAccess.get_files_at(dir):
+			if not f.ends_with(".gd"):
+				continue
+			var src := FileAccess.get_file_as_string(dir + "/" + f)
+			for m in re.search_all(src):
+				used[m.get_string(1)] = true
+	var mods: Dictionary = GameManager.load_json("res://data/modules.json")
+	for id in mods:
+		used["MOD_" + str(id).to_upper()] = true
+		used["ABBR_" + str(id).to_upper()] = true
+	for w in ["pulse_cannon", "missile_swarm", "gravity_bomb", "emp_launcher"]:
+		used["WPN_" + w.to_upper()] = true
+		used["WPNA_" + w.to_upper()] = true
+	for sid in GameManager.load_json("res://data/synergies.json"):
+		used["SYN_" + str(sid).to_upper()] = true
+	for pn in GameManager.load_json("res://data/energy.json")["preset_order"]:
+		used["PRESET_" + str(pn)] = true
+	used["PRESET_CUSTOM"] = true
+	for k in battle.player.ship.errors:
+		used[k] = true
+	for k in ["ERR_NO_CORE", "ERR_MULTI_CORE", "ERR_NO_COCKPIT", "ERR_DISCONNECTED", "ERR_EXHAUST", "ERR_NO_THRUST", "ERR_POWER",
+			"BLD_MSG_DRAG", "BLD_MSG_PLACED", "BLD_MSG_REMOVED", "BLD_MSG_APPLIED", "BLD_MSG_INVALID", "BLD_APPLY", "BLD_RESET", "BLD_CLOSE",
+			"MENU_RESUME", "MENU_RESTART", "MENU_QUIT", "MENU_REDUCE_FLASH", "MENU_LANGUAGE", "MENU_ON", "MENU_OFF"]:
+		used[k] = true
+	var missing: PackedStringArray = []
+	for k in used:
+		for lang in ["en", "zh"]:
+			if not Loc.has_key(k, lang):
+				missing.append("%s[%s]" % [k, lang])
+	var unused := 0
+	for k in Loc.keys:
+		if not used.has(k):
+			unused += 1
+	_check("i18n.no_missing_keys", missing.is_empty(), "used=%d csv=%d unused_in_code=%d missing=%s" % [used.size(), Loc.keys.size(), unused, missing])
+	_check("i18n.font_loaded", Loc.font != null and ThemeDB.fallback_font == Loc.font, "glyph 信 supported=%s" % (Loc.font.has_char("信".unicode_at(0)) if Loc.font else false))
+	Loc.set_language(prev, false)
+
 func _nearest_enemy(from: Vector2, max_d := 1e9) -> Node2D:
 	var best: Node2D = null
 	var bd := max_d
@@ -126,10 +183,19 @@ func _process(delta: float) -> void:
 	if p == null or not p.alive:
 		return
 	t += delta
+	_sample_t += delta
+	if _sample_t >= 10.0:
+		_sample_t = 0.0
+		var sample := [GameManager.run_time, int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)), battle.field.chunks.size(), battle.field.asteroids.size()]
+		_node_samples.append(sample)
+		print("[AUTOTEST] t=%.0fs dist=%.0fm nodes=%d chunks=%d asteroids=%d enemies=%d" % [sample[0], battle.distance(), sample[1], sample[2], sample[3], battle.enemies.size()])
 	var e: RefCounted = p.energy
 	# --- pilot ---
-	var center: Vector2 = battle.arena.get_center()
-	var orbit_pos := center + Vector2(cos(t * 0.5), sin(t * 0.5)) * 140.0
+	# weave across the band in the lower half; every 20s push ahead for 4s to test push-scrolling
+	var orbit_pos := Vector2(sin(t * 0.7) * 90.0, battle.scroll_y + 70.0 + sin(t * 0.4) * 40.0)
+	if fmod(t, 20.0) > 16.0:
+		orbit_pos.y = battle.scroll_y - 200.0
+		_push_time += delta
 	var move := (orbit_pos - p.global_position).limit_length(40.0) / 40.0
 	var tgt := _nearest_enemy(p.global_position)
 	var aim: Vector2 = p.global_position + Vector2.RIGHT * 50.0
@@ -198,6 +264,19 @@ func _process(delta: float) -> void:
 			want_secondary = true
 			_pulse_t -= delta
 			if _pulse_t <= 0.0:
+				_combo_phase = 4
+				_pulse_t = 0.8
+		elif _combo_phase == 4:
+			# follow up with primaries on EMP-marked targets
+			var marked: Node2D = null
+			for en in battle.enemies:
+				if en.alive and en.emp_timer > 0.0:
+					marked = en
+					break
+			if marked:
+				aim = marked.global_position
+			_pulse_t -= delta
+			if _pulse_t <= 0.0:
 				_combo_phase = 0
 				_combo_t = 3.0
 	p.auto = {"move": move, "aim_point": aim, "fire": tgt != null, "secondary": want_secondary, "dash": dash, "overload": want_overload}
@@ -231,6 +310,19 @@ func report() -> bool:
 	_check("asteroids.destroyed", int(f["asteroids_destroyed"]) > 0, str(f["asteroids_destroyed"]))
 	_check("asteroids.blocked_shots", int(f["shots_blocked"]) > 0, str(f["shots_blocked"]))
 	_check("asteroids.ore_chain_reaction", int(f["ore_chain"]) > 0, str(f["ore_chain"]))
+	var f2: Dictionary = battle.field.counters
+	_check("chunks.generated_and_freed", int(f2["chunks_generated"]) > 3 and int(f2["chunks_freed"]) > 0, "generated=%d freed=%d active=%d" % [f2["chunks_generated"], f2["chunks_freed"], battle.field.chunks.size()])
+	_check("chunks.active_bounded", battle.field.chunks.size() <= 5, str(battle.field.chunks.size()))
+	var max_nodes := 0
+	var late_max := 0
+	for smp in _node_samples:
+		max_nodes = maxi(max_nodes, smp[1])
+		if smp[0] > GameManager.run_time * 0.5:
+			late_max = maxi(late_max, smp[1])
+	_check("nodes.bounded", _node_samples.size() >= 3 and max_nodes < 900, "max=%d late_max=%d samples=%d" % [max_nodes, late_max, _node_samples.size()])
+	var min_expected: float = battle.base_scroll_speed * GameManager.run_time * 0.98
+	_check("scroll.progresses", battle.distance() >= min_expected, "distance=%.0f >= %.0f (base speed x time)" % [battle.distance(), min_expected])
+	_check("scroll.push_ahead", _push_time <= 0.0 or battle.distance() > battle.base_scroll_speed * GameManager.run_time + 5.0, "distance=%.0f base_only=%.0f push_time=%.1fs" % [battle.distance(), battle.base_scroll_speed * GameManager.run_time, _push_time])
 	_check("asteroids.meteor_telegraphed", int(f["meteors"]) > 0, str(f["meteors"]))
 	var failed := 0
 	for k in checks:

@@ -6,8 +6,8 @@ var battle: Node
 var _acc := 0.0
 
 func _ready() -> void:
-	position = Vector2(4, 20)
-	add_theme_font_size_override("font_size", 8)
+	position = Vector2(4, 44)
+	add_theme_font_size_override("font_size", 12)
 	add_theme_color_override("font_color", PixelLib.C_CYAN)
 	visible = bool(SaveManager.settings.get("show_perf", false))
 
@@ -24,11 +24,12 @@ func _process(delta: float) -> void:
 	text = summary()
 
 func summary() -> String:
-	return "FPS %d | %.2f ms\nENEMIES %d\nPROJECTILES %d (pool created %d)\nDRAW CALLS %d\nMEM %.1f MB | NODES %d" % [
+	return tr("PERF_TEXT") % [
 		Engine.get_frames_per_second(),
 		Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0,
 		battle.enemies.size() if battle else 0,
 		ObjectPool.active(ProjectileScript.POOL_KEY), ObjectPool.created_total,
 		Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
 		Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0,
-		Performance.get_monitor(Performance.OBJECT_NODE_COUNT)]
+		Performance.get_monitor(Performance.OBJECT_NODE_COUNT),
+		battle.field.chunks.size() if battle else 0]

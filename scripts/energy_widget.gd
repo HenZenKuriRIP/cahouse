@@ -51,11 +51,11 @@ func _draw() -> void:
 	var hot: bool = core.overload_active
 	var edge := PixelLib.C_RED if hot else PixelLib.C_CYAN
 	draw_polyline(v + PackedVector2Array([v[0]]), edge, 1.0)
-	draw_string(font, v[0] + Vector2(-3, -1), "W", HORIZONTAL_ALIGNMENT_LEFT, -1, 8, PixelLib.C_RED)
-	draw_string(font, v[1] + Vector2(-5, 8), "S", HORIZONTAL_ALIGNMENT_LEFT, -1, 8, PixelLib.C_CYAN)
-	draw_string(font, v[2] + Vector2(0, 8), "E", HORIZONTAL_ALIGNMENT_LEFT, -1, 8, PixelLib.C_GOLD)
+	draw_string(font, v[0] + Vector2(-6, 0), tr("EN_W"), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, PixelLib.C_RED)
+	draw_string(font, v[1] + Vector2(-10, 4), tr("EN_S"), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, PixelLib.C_CYAN)
+	draw_string(font, v[2] + Vector2(1, 4), tr("EN_E"), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, PixelLib.C_GOLD)
 	var tp := point_for(core.target).floor()
 	var cp := point_for(core.current).floor()
 	draw_rect(Rect2(tp - Vector2(1, 1), Vector2(3, 3)), Color(PixelLib.C_WHITE, 0.4))
 	draw_rect(Rect2(cp - Vector2(2, 2), Vector2(4, 4)), PixelLib.C_GOLD if hot else PixelLib.C_WHITE)
-	draw_string(font, Vector2(0, -2), "%s %d/%d/%d" % [core.preset_name, roundi(core.current.x * 100), roundi(core.current.y * 100), roundi(core.current.z * 100)], HORIZONTAL_ALIGNMENT_LEFT, 70, 8, PixelLib.C_WHITE)
+	draw_string(font, Vector2(-20, -1), tr("PRESET_" + core.preset_name), HORIZONTAL_ALIGNMENT_CENTER, 94, 12, PixelLib.C_WHITE)

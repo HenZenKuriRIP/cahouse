@@ -57,6 +57,30 @@
 | 10 | 非无敌模式可死亡、模块可被打掉 | 无 `--god` 运行：`run LOST`，日志 `module destroyed: ...` |
 | 11 | 手感/可读性/趣味 | 人工试玩，填写 GAME_DESIGN.md §18 清单 |
 
+## Phase 2b 任务清单
+- [x] CSV → 运行时 Translation（无缓存可用），全部 UI 文本 tr() 化
+- [x] 暂停菜单语言切换，设置 v4 迁移，默认跟随系统语言
+- [x] Fusion Pixel 12px 简中字体（OFL）+ 许可文件，设为默认主题字体
+- [x] 竖屏 270×480 / 540×960，handheld orientation=portrait
+- [x] 自动上卷 + 前推加速；水平带软墙；镜头独立于玩家
+- [x] 区块化种子生成/释放小行星；敌人上方/两侧刷出并回收；星空纵向视差
+- [x] HUD、菜单、编辑器、性能面板竖屏重排
+- [x] 距离目标 7200m 胜利；`--endless` 无尽
+- [x] autotest 新增：双语加载/切换、缺失键扫描、区块生成/释放、节点数有界、卷轴推进、前推
+
+## Phase 2b 验收标准与测试方法
+| # | 标准 | 测试方法 |
+|---|---|---|
+| 1 | 无缓存启动零错误 | `rm -rf .godot && godot --headless --path . --quit-after 600` |
+| 2 | 中英文加载、切换后文本不同 | `CHECK i18n.en_loaded / zh_loaded / switch_changes_text` |
+| 3 | 代码使用的键在两种语言都存在 | `CHECK i18n.no_missing_keys`（扫描 scripts/ autoload 中的 tr 字面量 + 数据驱动动态键） |
+| 4 | 中文字体可用 | `CHECK i18n.font_loaded`（含“信”字形） |
+| 5 | 区块生成与释放、活跃区块 ≤5 | `CHECK chunks.*` |
+| 6 | 长时间运行节点数有界 | `-- --autotest=60 --timescale=8 --god --endless`：480s 游戏时间节点数在敌人封顶后稳定于 ~600 |
+| 7 | 卷轴推进 / 前推 | `CHECK scroll.progresses / scroll.push_ahead` |
+| 8 | 7200m 胜利 | `--god` 运行输出 `run WON ... distance=7200m` |
+| 9 | 竖屏布局可读、中文清晰、编辑器可操作 | 人工：540×960 窗口检查 HUD、菜单、Tab 编辑器、切换语言 |
+
 ## 已知缺口 / 后续
 - [ ] 人工手感测试（box 无显示器，仅 headless 验证）
 - [ ] Web 导出（未下载导出模板）
@@ -64,5 +88,7 @@
 - [ ] 手柄菜单导航细调；设置菜单 UI
 - [ ] 编辑器手柄操作（目前仅鼠标）
 - [ ] 编辑器内修改的设计不持久化（重开回默认舰船）
-- [ ] 协同 emp_crit 在非无敌短局中触发次数较少（1-3 次），可能需要调参
+- [ ] 协同 emp_crit 在非无敌短局中触发次数少（0–8 次），seed 3287 非无敌运行为 0 → 该检查偶发 FAIL，需调参（如 EMP 不致死、标记时间更长）
+- [ ] 竖屏布局仅通过代码坐标设计，未实机目视；12px 字体下英文长文本可能拥挤
+- [ ] 无尽模式下 HUD 距离单位“m”未本地化
 - [ ] Phase 3–6 见 GAME_DESIGN.md §16

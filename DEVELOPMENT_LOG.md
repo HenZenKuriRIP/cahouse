@@ -55,3 +55,21 @@
 ### 未验证
 - 无显示器：三角控件拖拽、编辑器鼠标拖放、边缘失真视觉效果、手柄输入均**只经代码路径/API 测试，未人工操作**。
 - Web 导出未做。
+
+## 2026-10-21 Phase 2b：双语 + 竖屏无尽战场（UTC+8）
+### 决策
+- **本地化不走 CSV 导入**：Godot 的 CSV 翻译导入依赖 `.godot` 缓存，删除缓存直接运行会失效；改为 `Loc` autoload 运行时解析 CSV 生成 `Translation`。`strings.csv.import` 设为 `importer="keep"`，避免编辑器把它转成 .translation 并保证原样导出。
+- **字体**：Fusion Pixel Font（TakWolf）v2026.10.16，12px proportional zh_hans（woff2，约 680KB），**SIL OFL 1.1**，许可文件随附。Zpix 许可非 OFL（个人免费/商用需授权），故未选用。以 FontFile 字节加载、关闭抗锯齿/hinting/子像素，12px 为原生像素尺寸。
+- **胜利条件**：改为抵达 7200m（= 40px/s × 180s），保留 3 分钟节奏，同时奖励前压。
+- **滚动模型**：初版玩家速度为世界系，前推几乎无效（终端速度 ~68px/s，扣除 40px/s 卷轴后余量太小，autotest `scroll.push_ahead` FAIL）；改为屏幕系（卷轴带着玩家走），前推生效。
+
+### 真实验证（Godot v4.7.2.stable.official.ed1daf0bf，headless，每次 `rm -rf .godot`）
+1. `--quit-after 600`：仅横幅 + `run start seed=... goal=7200m endless=false lang=en`，零错误/警告。
+2. `-- --autotest=32 --timescale=6 --god`：`run WON at 177.3s distance=7200m kills=356`，`RESULT PASS (40/40)`。
+   - i18n：`en HULL/RESUME`、`zh 船体/继续`，`used=100 csv=100 missing=[]`，字体含“信”字形。
+   - chunks generated=17 freed=13 active=4；nodes max=318；distance 7200 ≥ 6949；push_time 33.2s 使距离超出纯基础值（7091）。
+3. `-- --autotest=60 --timescale=8 --god --endless --lang=zh`：480s 游戏时间，distance 19660m，chunks generated=43 freed=39 active=4；节点数在 ~200s 敌人达到上限 60 后稳定于 596–619，`RESULT PASS (40/40)`。
+4. 非无敌：seed 11 → LOST 87.6s，PASS 40/40；seed 22 → LOST 90.2s，PASS 40/40（emp_crit=1）；**seed 3287 → LOST 79.4s，FAIL 39/40（synergy.emp_crit=0）**。该检查在非无敌短局中仍不稳定。
+
+### 未验证
+- 无显示器：竖屏 HUD/编辑器/菜单的实际视觉、中文字体在 2× 缩放下的清晰度、鼠标拖放、语言切换按钮点击均**未人工目视**（语言切换经 API 测试）。

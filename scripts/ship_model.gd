@@ -9,7 +9,8 @@ var defs: Dictionary
 var base: Dictionary
 var grid_size := 7
 var cells: Dictionary = {} # Vector2i -> {"id":String, "weapon":String, "hp":float, "max_hp":float}
-var errors: PackedStringArray = []
+var errors: PackedStringArray = [] # translation keys (ERR_*)
+var loose_count := 0
 var connected: Dictionary = {} # Vector2i -> true
 var stats: Dictionary = {}
 var destroyed_count := 0
@@ -86,11 +87,11 @@ func revalidate() -> void:
 		elif cells[c]["id"] == "cockpit":
 			cockpits += 1
 	if cores == 0:
-		errors.append("缺少能量核心 (NO CORE)")
+		errors.append("ERR_NO_CORE")
 	elif cores > 1:
-		errors.append("只能有一个能量核心 (MULTIPLE CORES)")
+		errors.append("ERR_MULTI_CORE")
 	if cockpits == 0:
-		errors.append("缺少驾驶舱 (NO COCKPIT)")
+		errors.append("ERR_NO_COCKPIT")
 	if cores >= 1:
 		var start := core_cell()
 		var queue: Array = [start]
@@ -104,20 +105,30 @@ func revalidate() -> void:
 					queue.append(n)
 		var loose := cells.size() - connected.size()
 		if loose > 0:
-			errors.append("%d 个模块未连接到核心 (DISCONNECTED)" % loose)
+			errors.append("ERR_DISCONNECTED")
+			loose_count = loose
 	var thrusters := 0
 	for c in connected:
 		var d: Dictionary = defs[cells[c]["id"]]
 		if cells[c]["id"] == "main_thruster":
 			if cells.has(c + DIRS[d["exhaust"]]):
-				errors.append("主推进器尾焰被遮挡 (EXHAUST BLOCKED)")
+				errors.append("ERR_EXHAUST")
 			else:
 				thrusters += 1
 	if thrusters == 0:
-		errors.append("缺少有效主推进器 (NO THRUST)")
+		errors.append("ERR_NO_THRUST")
 	_compute_stats()
 	if stats["power"] < 0:
-		errors.append("能量不足 %d (POWER DEFICIT)" % stats["power"])
+		errors.append("ERR_POWER")
+
+## Localized, formatted error line for a key in `errors`.
+func error_text(key: String) -> String:
+	var t := TranslationServer.translate(key)
+	if key == "ERR_DISCONNECTED":
+		return t % loose_count
+	if key == "ERR_POWER":
+		return t % int(stats["power"])
+	return t
 
 func is_valid() -> bool:
 	return errors.is_empty()

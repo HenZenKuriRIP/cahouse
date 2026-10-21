@@ -2,6 +2,7 @@ extends Control
 const PixelLib = preload("res://scripts/pixel.gd")
 ## Reusable centered panel with title + buttons. Used for pause / game over / victory.
 signal chosen(action: String)
+## actions: Array of [key, label]; `chosen` emits the key.
 var title_label: Label
 var sub_label: Label
 var box: VBoxContainer
@@ -14,17 +15,18 @@ func build(title: String, sub: String, actions: Array) -> void:
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(dim)
 	box = VBoxContainer.new()
-	box.position = Vector2(170, 80)
-	box.size = Vector2(140, 110)
+	box.position = Vector2(45, 130)
+	box.size = Vector2(180, 200)
 	box.add_theme_constant_override("separation", 4)
 	add_child(box)
-	title_label = _label(title, 16, PixelLib.C_CYAN)
-	sub_label = _label(sub, 8, PixelLib.C_WHITE)
+	title_label = _label(title, 24, PixelLib.C_CYAN)
+	sub_label = _label(sub, 12, PixelLib.C_WHITE)
 	for a in actions:
 		var b := Button.new()
-		b.text = a
-		b.add_theme_font_size_override("font_size", 8)
-		b.pressed.connect(func() -> void: chosen.emit(a))
+		b.text = a[1]
+		b.add_theme_font_size_override("font_size", 12)
+		var key: String = a[0]
+		b.pressed.connect(func() -> void: chosen.emit(key))
 		box.add_child(b)
 
 func _label(t: String, s: int, c: Color) -> Label:

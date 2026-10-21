@@ -13,7 +13,14 @@ const AsteroidFieldScript = preload("res://scripts/asteroid_field.gd")
 const ShipBuilderScript = preload("res://scripts/ship_builder.gd")
 const AutotestDriverScript = preload("res://scripts/autotest_driver.gd")
 
-var arena := Rect2(-600, -340, 1200, 680)
+const VIEW := Vector2(270, 480)
+## Vertical endless battlefield: the camera auto-scrolls upward (world -y). Player is kept in a band.
+var band_half := 118.0
+var scroll_y := 0.0
+var base_scroll_speed := 40.0
+var push_margin := 100.0
+var distance_goal := 7200.0
+var endless := false
 var run_duration := 180.0
 var world: Node2D
 var fx_layer: Node2D
@@ -45,6 +52,8 @@ func _ready() -> void:
 	GameManager.start_run()
 	get_tree().paused = false
 	for a in OS.get_cmdline_user_args():
+		if a == "--endless":
+			endless = true
 		if a.begins_with("--timescale="):
 			Engine.time_scale = float(a.split("=")[1])
 	var bg := CanvasLayer.new()
@@ -56,11 +65,6 @@ func _ready() -> void:
 
 	world = Node2D.new()
 	add_child(world)
-	var border := Line2D.new()
-	border.points = PackedVector2Array([arena.position, Vector2(arena.end.x, arena.position.y), arena.end, Vector2(arena.position.x, arena.end.y), arena.position])
-	border.width = 1.0
-	border.default_color = Color(PixelLib.C_VIOLET, 0.35)
-	world.add_child(border)
 	well_layer = Node2D.new()
 	world.add_child(well_layer)
 	field = AsteroidFieldScript.new()
@@ -69,7 +73,7 @@ func _ready() -> void:
 	world.add_child(enemy_layer)
 	player = PlayerScript.new()
 	world.add_child(player)
-	player.setup(self, arena)
+	player.setup(self)
 	field.setup(self, GameManager.run_seed + 101)
 	proj_layer = Node2D.new()
 	world.add_child(proj_layer)
@@ -79,11 +83,8 @@ func _ready() -> void:
 	camera = Camera2D.new()
 	camera.position_smoothing_enabled = true
 	camera.position_smoothing_speed = 8.0
-	camera.limit_left = int(arena.position.x) - 60
-	camera.limit_top = int(arena.position.y) - 60
-	camera.limit_right = int(arena.end.x) + 60
-	camera.limit_bottom = int(arena.end.y) + 60
-	player.add_child(camera)
+	camera.position_smoothing_enabled = false
+	world.add_child(camera)
 	stars.setup(camera, GameManager.run_seed)
 
 	synergy = SynergySystemScript.new()
@@ -119,15 +120,24 @@ func _ready() -> void:
 		driver = AutotestDriverScript.new()
 		add_child(driver)
 		driver.setup(self)
-	print("[VOID SIGNAL] run start seed=%d duration=%.0fs" % [GameManager.run_seed, run_duration])
+	print("[VOID SIGNAL] run start seed=%d goal=%.0fm endless=%s lang=%s" % [GameManager.run_seed, distance_goal, endless, Loc.language])
 
 func _process(delta: float) -> void:
 	_real_time += delta / maxf(Engine.time_scale, 0.001)
 	if not ended and not get_tree().paused:
 		GameManager.run_time += delta
 		director.tick(GameManager.run_time, delta)
-		if GameManager.run_time >= run_duration and player.alive:
+		# the ship moves in the screen frame: auto-scroll carries it; flying above the push line drags the camera ahead
+		var dy := base_scroll_speed * delta
+		scroll_y -= dy
+		if player.alive:
+			player.global_position.y -= dy
+			var push_line := scroll_y - push_margin
+			if player.global_position.y < push_line:
+				scroll_y -= push_line - player.global_position.y
+		if not endless and distance() >= distance_goal and player.alive:
 			_end(true)
+	camera.position = Vector2(0, scroll_y)
 	wells = wells.filter(func(w: Variant) -> bool: return is_instance_valid(w))
 	if shake_amount > 0.0:
 		shake_amount = maxf(0.0, shake_amount - 20.0 * delta)
@@ -136,7 +146,7 @@ func _process(delta: float) -> void:
 		_autotest_finish("TIMEOUT")
 
 func _autotest_finish(reason: String) -> void:
-	print("[AUTOTEST] END reason=%s state=%s run_time=%.1f kills=%d spawned=%d hull=%.0f" % [reason, GameManager.State.keys()[GameManager.state], GameManager.run_time, GameManager.kills, director.spawned_total, player.hull])
+	print("[AUTOTEST] END reason=%s state=%s run_time=%.1f distance=%.0f kills=%d spawned=%d hull=%.0f" % [reason, GameManager.State.keys()[GameManager.state], GameManager.run_time, distance(), GameManager.kills, director.spawned_total, player.hull])
 	var ok: bool = driver.report() if driver else true
 	print("[AUTOTEST] PERF\n" + perf.summary())
 	get_tree().paused = true
@@ -144,6 +154,27 @@ func _autotest_finish(reason: String) -> void:
 	set_process(false)
 	await get_tree().create_timer(0.3, true, false, true).timeout
 	get_tree().quit(0 if ok else 1)
+
+func distance() -> float:
+	return -scroll_y
+
+func view_rect() -> Rect2:
+	return Rect2(Vector2(-VIEW.x / 2.0, scroll_y - VIEW.y / 2.0), VIEW)
+
+## Soft walls: horizontal band and a vertical window inside the scrolling view (above the HUD).
+func constrain_player(p: Node2D, delta: float) -> void:
+	var x: float = p.global_position.x
+	if absf(x) > band_half:
+		p.velocity.x -= signf(x) * (absf(x) - band_half) * 40.0 * delta
+	p.global_position.x = clampf(x, -band_half - 12.0, band_half + 12.0)
+	var top := scroll_y - 205.0
+	var bottom := scroll_y + 140.0
+	var y: float = p.global_position.y
+	if y > bottom:
+		p.velocity.y -= (y - bottom) * 40.0 * delta
+	elif y < top:
+		p.velocity.y += (top - y) * 40.0 * delta
+	p.global_position.y = clampf(p.global_position.y, top - 15.0, bottom + 25.0)
 
 func ui_blocks_fire() -> bool:
 	return builder.visible or (hud.widget and hud.widget.dragging) or (hud.widget and Rect2(hud.widget.global_position, hud.widget.size).has_point(get_viewport().get_mouse_position()) and not InputManager.using_gamepad)
@@ -170,13 +201,17 @@ func _toggle_pause() -> void:
 	get_tree().paused = p
 	GameManager.state = GameManager.State.PAUSED if p else GameManager.State.PLAYING
 	if p:
-		pause_menu = _make_menu("PAUSED", "SIGNAL ON HOLD", ["RESUME", "RESTART", _flash_label(), "QUIT"])
+		pause_menu = _make_pause_menu()
 	elif pause_menu:
 		pause_menu.queue_free()
 		pause_menu = null
 
-func _flash_label() -> String:
-	return "REDUCE FLASH: " + ("ON" if bool(SaveManager.settings.get("reduce_flash", false)) else "OFF")
+func _make_pause_menu() -> Control:
+	var flash_on := bool(SaveManager.settings.get("reduce_flash", false))
+	return _make_menu(tr("MENU_PAUSED"), tr("MENU_PAUSED_SUB"), [
+		["MENU_RESUME", tr("MENU_RESUME")], ["MENU_RESTART", tr("MENU_RESTART")],
+		["MENU_REDUCE_FLASH", tr("MENU_REDUCE_FLASH") % tr("MENU_ON" if flash_on else "MENU_OFF")],
+		["MENU_LANGUAGE", tr("MENU_LANGUAGE") % tr("LANG_NAME")], ["MENU_QUIT", tr("MENU_QUIT")]])
 
 func _make_menu(title: String, sub: String, actions: Array) -> Control:
 	var m := Control.new()
@@ -188,18 +223,21 @@ func _make_menu(title: String, sub: String, actions: Array) -> Control:
 	return m
 
 func _on_menu(action: String) -> void:
-	if action.begins_with("REDUCE FLASH"):
-		SaveManager.set_setting("reduce_flash", not bool(SaveManager.settings.get("reduce_flash", false)))
+	if action == "MENU_REDUCE_FLASH" or action == "MENU_LANGUAGE":
+		if action == "MENU_REDUCE_FLASH":
+			SaveManager.set_setting("reduce_flash", not bool(SaveManager.settings.get("reduce_flash", false)))
+		else:
+			Loc.toggle_language()
 		pause_menu.queue_free()
-		pause_menu = _make_menu("PAUSED", "SIGNAL ON HOLD", ["RESUME", "RESTART", _flash_label(), "QUIT"])
+		pause_menu = _make_pause_menu()
 		return
 	match action:
-		"RESUME":
+		"MENU_RESUME":
 			_toggle_pause()
-		"RESTART":
+		"MENU_RESTART":
 			get_tree().paused = false
 			get_tree().reload_current_scene()
-		"QUIT":
+		"MENU_QUIT":
 			get_tree().quit()
 
 func _on_player_died() -> void:
@@ -213,16 +251,17 @@ func _end(won: bool) -> void:
 		EventBus.run_won.emit()
 	else:
 		EventBus.run_lost.emit()
-	print("[VOID SIGNAL] run %s at %.1fs kills=%d" % ["WON" if won else "LOST", GameManager.run_time, GameManager.kills])
+	print("[VOID SIGNAL] run %s at %.1fs distance=%.0fm kills=%d" % ["WON" if won else "LOST", GameManager.run_time, distance(), GameManager.kills])
 	if GameManager.autotest_seconds > 0.0:
 		_autotest_finish("WON" if won else "LOST")
 		return
 	if won:
 		for e in enemies.duplicate():
 			e.die()
-	var title := "SIGNAL HELD" if won else "SIGNAL LOST"
-	var sub := "SURVIVED 3:00  KILLS %d" % GameManager.kills if won else "TIME %d:%02d  KILLS %d" % [int(GameManager.run_time) / 60, int(GameManager.run_time) % 60, GameManager.kills]
-	end_menu = _make_menu(title, sub, ["RESTART", "QUIT"])
+	var title := tr("END_WON_TITLE") if won else tr("END_LOST_TITLE")
+	var rt := int(GameManager.run_time)
+	var sub: String = tr("END_WON_SUB") % [int(distance()), GameManager.kills] if won else tr("END_LOST_SUB") % [int(distance()), rt / 60, rt % 60, GameManager.kills]
+	end_menu = _make_menu(title, sub, [["MENU_RESTART", tr("MENU_RESTART")], ["MENU_QUIT", tr("MENU_QUIT")]])
 
 # ---- spawning API used by systems ----
 func spawn_projectile(pos: Vector2, vel: Vector2, dmg: float, life: float, team: int, col: Color, crit: bool, extra: Dictionary = {}) -> void:

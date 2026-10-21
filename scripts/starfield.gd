@@ -1,7 +1,7 @@
 extends Node2D
 ## Procedural 3-layer parallax starfield drawn in screen space.
-const W := 480.0
-const H := 270.0
+const W := 270.0
+const H := 480.0
 var stars: Array = [] # [Vector2, layer]
 var camera: Camera2D
 const FACTORS := [0.1, 0.3, 0.6]

@@ -2,7 +2,16 @@
 
 原创像素风太空战斗 Roguelite，目标 **Godot 4.7.x**（已在 4.7.2 headless 验证，4.3 也可启动）+ GDScript。内部分辨率 480×270，整数缩放（默认窗口 1440×810）。
 
-## 当前状态：Phase 2（能量核心 / 模块舰船 / 4 武器 / 3 协同 / 小行星带）
+## 当前状态：Phase 2b（中英双语 + 竖屏无尽卷轴战场）
+
+Phase 2b 新增：
+- **中英双语**：所有 HUD/菜单/编辑器/协同/警告/浮字走 `tr()` 键（`data/i18n/strings.csv`，运行时解析成 Translation，无需导入缓存）。暂停菜单可切换 中文/English，保存在设置（存档 v4），默认按系统语言（zh* → 中文，否则英文）。
+- **像素中文字体**：Fusion Pixel Font 12px 比例 简体中文（SIL OFL 1.1），无抗锯齿，作为默认主题字体。
+- **竖屏**：内部 270×480，窗口 540×960 整数缩放，移动端竖屏方向。
+- **无尽纵向战场**：镜头以 40px/s 自动上卷，飞到上方推进线可带动镜头加速；按区块（480px）种子生成小行星并在下方远处释放；敌人从上方与两侧刷出；星空纵向视差。
+- **胜利条件**：抵达 7200m（基础速度下约 3 分钟，主动前推可更快）；`--endless` 为无尽模式。
+
+## Phase 2（能量核心 / 模块舰船 / 4 武器 / 3 协同 / 小行星带）
 
 Phase 2 新增：
 - 动态能量核心 WEAPON/SHIELD/ENGINE（三角控件可拖拽，1-4 预设，Z/X/C 微调），实时影响伤害/射速/散热、护盾容量/回复、加速/极速/转向/冲刺冷却
@@ -35,6 +44,7 @@ Phase 1 内容：
 | 能量微调 武器/护盾/引擎 | Z / X / C | X / B / R3 |
 | 能量三角拖拽 | 鼠标左键拖动 HUD 底部三角 | — |
 | 舰船编辑器 | Tab | Back/Select |
+| 语言切换 | Esc → 语言 | Start → 语言 |
 | 暂停 | Esc | Start |
 | 性能面板 | F3 | — |
 
@@ -44,7 +54,14 @@ godot --path .                      # 正常游玩
 godot --headless --path . --import  # 导入
 # 自动测试：自动驾驶跑完整局，打印统计后退出
 godot --headless --path . -- --autotest=32 --timescale=6 [--god] [--seed=123]
+# 额外参数：--endless（无尽）、--lang=zh|en
 # 输出 [AUTOTEST] CHECK ... 与 RESULT PASS/FAIL；FAIL 时退出码 1
 ```
 
 文档：`GAME_DESIGN.md`（设计）、`ARCHITECTURE.md`（技术架构）、`TODO.md`（路线图与任务）、`DEVELOPMENT_LOG.md`（开发与验证日志）。
+
+## 字体与许可
+`assets/fonts/fusion-pixel/`：Fusion Pixel Font v2026.10.16（12px proportional, zh_hans, woff2），作者 TakWolf，**SIL Open Font License 1.1**（见同目录 `OFL.txt` 及 `LICENSES/` 中上游字体 Ark Pixel / Cubic 11 / Galmuri 的许可）。
+
+## 导出注意
+`strings.csv` 与字体使用 `importer="keep"`（原样导出、运行时读取）。导出预设需在“非资源文件”过滤中加入 `*.json, *.csv, *.woff2`。

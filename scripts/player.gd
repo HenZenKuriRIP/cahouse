@@ -32,13 +32,11 @@ var flame_phase := 0.0
 var aim_dir := Vector2.RIGHT
 var aim_point := Vector2.ZERO
 var god := false
-var bounds := Rect2()
 var auto: Dictionary = {} # autotest input override
 var modules_lost: Array = []
 
-func setup(b: Node, arena: Rect2) -> void:
+func setup(b: Node) -> void:
 	battle = b
-	bounds = arena
 	god = GameManager.autotest_god
 	energy = EnergyCore.new(GameManager.run_seed + 7)
 	energy.overheated.connect(func(cat: String, dur: float) -> void:
@@ -168,7 +166,7 @@ func _process(delta: float) -> void:
 	elif velocity.length() > cur_max_speed():
 		velocity = velocity.normalized() * cur_max_speed()
 	global_position += velocity * delta
-	global_position = global_position.clamp(bounds.position, bounds.end)
+	battle.constrain_player(self, delta)
 	rotation = rotate_toward(rotation, aim_dir.angle(), cur_turn() * delta)
 	# weapons
 	var dmg_m: float = energy.mult("weapon_damage")
@@ -225,7 +223,7 @@ func take_damage(amount: float, from_pos: Vector2) -> void:
 		if lost != "":
 			modules_lost.append(lost)
 			battle.spawn_explosion(global_position + local_dir.normalized() * radius, PixelLib.C_GOLD, 14)
-			battle.spawn_float_text(global_position + Vector2(0, -16), "MODULE LOST: " + str(ship.defs[lost]["name"]), PixelLib.C_RED, 1.4)
+			battle.spawn_float_text(global_position + Vector2(0, -16), tr("FT_MODULE_LOST") % tr("MOD_" + lost.to_upper()), PixelLib.C_RED, 1.4)
 			EventBus.module_destroyed.emit(lost)
 			if lost == "core" or lost == "cockpit":
 				hull = 0.0

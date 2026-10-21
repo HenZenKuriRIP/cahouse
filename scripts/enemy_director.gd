@@ -21,7 +21,15 @@ func setup(b: Node, seed_value: int) -> void:
 	max_enemies = int(w["max_enemies"])
 	enemy_defs = GameManager.load_json("res://data/enemies/enemies.json")
 
+var culled_total := 0
+
 func tick(t: float, delta: float) -> void:
+	# despawn enemies left far behind the scrolling view (not a kill)
+	var cull_y: float = battle.view_rect().end.y + 120.0
+	for e in battle.enemies.duplicate():
+		if e.global_position.y > cull_y:
+			culled_total += 1
+			battle.remove_enemy(e)
 	var idx := 0
 	for i in waves.size():
 		if t >= float(waves[i]["start"]):
@@ -51,8 +59,13 @@ func _pick(weights: Dictionary) -> String:
 	return weights.keys()[0]
 
 func _spawn(type_id: String) -> void:
-	var a := rng.randf() * TAU
-	var pos: Vector2 = battle.player.global_position + Vector2(cos(a), sin(a)) * spawn_radius
-	pos = pos.clamp(battle.arena.position, battle.arena.end)
+	# spawn ahead (top edge) 70%, flanks (upper half, outside the band) 30%
+	var v: Rect2 = battle.view_rect()
+	var pos: Vector2
+	if rng.randf() < 0.7:
+		pos = Vector2(rng.randf_range(v.position.x + 10, v.end.x - 10), v.position.y - 20.0)
+	else:
+		var side := -1.0 if rng.randf() < 0.5 else 1.0
+		pos = Vector2(side * (v.size.x / 2.0 + 16.0), rng.randf_range(v.position.y + 20, v.get_center().y))
 	spawned_total += 1
 	battle.spawn_enemy(type_id, enemy_defs[type_id], pos, rng.randi())

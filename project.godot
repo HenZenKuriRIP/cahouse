@@ -16,13 +16,15 @@ InputManager="*res://autoload/input_manager.gd"
 AudioManager="*res://autoload/audio_manager.gd"
 SaveManager="*res://autoload/save_manager.gd"
 ObjectPool="*res://autoload/object_pool.gd"
+Loc="*res://autoload/localization.gd"
 
 [display]
 
-window/size/viewport_width=480
-window/size/viewport_height=270
-window/size/window_width_override=1440
-window/size/window_height_override=810
+window/size/viewport_width=270
+window/size/viewport_height=480
+window/size/window_width_override=540
+window/size/window_height_override=960
+window/handheld/orientation=1
 window/stretch/mode="canvas_items"
 window/stretch/scale_mode="integer"
 
