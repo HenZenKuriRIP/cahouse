@@ -1,0 +1,92 @@
+{
+ "mod_core": {
+  "kind": "module",
+  "tris": 1060,
+  "bytes": 73428
+ },
+ "mod_cockpit": {
+  "kind": "module",
+  "tris": 348,
+  "bytes": 25552
+ },
+ "mod_main_thruster": {
+  "kind": "module",
+  "tris": 616,
+  "bytes": 34960
+ },
+ "mod_side_thruster": {
+  "kind": "module",
+  "tris": 948,
+  "bytes": 46972
+ },
+ "mod_weapon_mount": {
+  "kind": "module",
+  "tris": 920,
+  "bytes": 63608
+ },
+ "mod_shield_gen": {
+  "kind": "module",
+  "tris": 1172,
+  "bytes": 65476
+ },
+ "mod_armor": {
+  "kind": "module",
+  "tris": 544,
+  "bytes": 40968
+ },
+ "mod_radiator": {
+  "kind": "module",
+  "tris": 984,
+  "bytes": 72392
+ },
+ "enemy_scout": {
+  "kind": "enemy",
+  "tris": 508,
+  "bytes": 37984
+ },
+ "enemy_interceptor": {
+  "kind": "enemy",
+  "tris": 1144,
+  "bytes": 80716
+ },
+ "enemy_bomber": {
+  "kind": "enemy",
+  "tris": 1156,
+  "bytes": 57264
+ },
+ "asteroid_a": {
+  "kind": "asteroid",
+  "tris": 380,
+  "bytes": 37324
+ },
+ "asteroid_b": {
+  "kind": "asteroid",
+  "tris": 380,
+  "bytes": 37324
+ },
+ "asteroid_c": {
+  "kind": "asteroid",
+  "tris": 380,
+  "bytes": 37324
+ },
+ "asteroid_ore": {
+  "kind": "asteroid",
+  "tris": 360,
+  "bytes": 38452
+ },
+ "proj_bullet": {
+  "kind": "projectile",
+  "tris": 80,
+  "bytes": 3900
+ },
+ "proj_missile": {
+  "kind": "projectile",
+  "tris": 138,
+  "bytes": 13020
+ },
+ "proj_bomb": {
+  "kind": "projectile",
+  "tris": 848,
+  "bytes": 23888
+ }
+}

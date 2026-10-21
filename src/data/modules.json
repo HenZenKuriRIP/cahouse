@@ -1,0 +1,10 @@
+{
+ "cockpit":       {"name":"COCKPIT","hp":60,"mass":2,"power":-1,"connectors":["N","E","S","W"],"protected":true,"color":"#EAF4FF","stats":{"turn":40}},
+ "core":          {"name":"ENERGY CORE","hp":80,"mass":3,"power":24,"connectors":["N","E","S","W"],"protected":true,"color":"#49E6D4","stats":{"energy":100,"cooling":10}},
+ "main_thruster": {"name":"MAIN THRUSTER","hp":30,"mass":2,"power":-3,"connectors":["N","E","S"],"exhaust":"W","color":"#FFCC66","stats":{"thrust":900}},
+ "side_thruster": {"name":"SIDE THRUSTER","hp":20,"mass":1,"power":-1,"connectors":["N","E","S","W"],"color":"#FFCC66","stats":{"thrust":150,"turn":90}},
+ "weapon_mount":  {"name":"WEAPON MOUNT","hp":25,"mass":1,"power":-2,"connectors":["N","S","W"],"arc":150,"color":"#FF5268","stats":{}},
+ "shield_gen":    {"name":"SHIELD GEN","hp":25,"mass":1,"power":-3,"connectors":["N","E","S","W"],"color":"#A78BFA","stats":{"shield":35,"shield_regen":6}},
+ "armor":         {"name":"ARMOR","hp":60,"mass":2,"power":0,"connectors":["N","E","S","W"],"color":"#5a6a8c","stats":{"hull":25}},
+ "radiator":      {"name":"RADIATOR","hp":15,"mass":1,"power":-1,"connectors":["N","S","W"],"color":"#7fd1ff","stats":{"cooling":12}}
+}

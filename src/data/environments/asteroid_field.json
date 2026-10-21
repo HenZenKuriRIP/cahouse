@@ -1,0 +1,4 @@
+{"id":"asteroid_field","name_key":"HUD_ENV_ASTEROID","chunk_height":480,"per_chunk":7,"chunks_ahead":2,"cull_below":260,
+ "ore_chance":0.25,"min_radius":7,"max_radius":15,"hp_per_radius":6,"drift":10,
+ "ore_fuse":1.2,"ore_blast_radius":60,"ore_blast_damage":40,"scrap_per_radius":0.25,
+ "meteor_interval":12,"meteor_warning":2.0,"meteor_radius":14,"meteor_speed":150,"safe_radius":90}

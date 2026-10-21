@@ -1,0 +1,6 @@
+{
+  "appId": "com.henzen.voidsignal3d",
+  "appName": "VOID SIGNAL 3D",
+  "webDir": "dist",
+  "android": { "backgroundColor": "#080C18" }
+}
