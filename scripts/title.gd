@@ -9,7 +9,9 @@ var _leaving := -1.0
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	if GameManager.autotest_seconds > 0.0 and GameManager.shots_set != "title":
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	print("[TITLE] ready viewport=%s window=%s touchscreen=%s" % [get_viewport_rect().size, DisplayServer.window_get_size(), DisplayServer.is_touchscreen_available()])
+	if GameManager.autotest_seconds > 0.0 and not (GameManager.shots_set in ["title", "flow"]):
 		get_tree().change_scene_to_file.call_deferred("res://scenes/battle.tscn")
 		return
 	var bg := CanvasLayer.new()
@@ -28,37 +30,74 @@ func _ready() -> void:
 		add_child(sd)
 		sd.setup_title(self)
 
-func _unhandled_input(event: InputEvent) -> void:
-	if _leaving >= 0.0:
+## ROOT-CAUSE FIX (Android "touch does nothing"): this Control used to keep the default MOUSE_FILTER_STOP and
+## listen in _unhandled_input. Touches arrive as InputEventScreenTouch (never handled) plus an emulated mouse click
+## that the GUI hands to this STOP control and marks handled, so _unhandled_input never ran. Now: mouse_filter
+## IGNORE + _input, which sees touch, mouse, keys and pads before the GUI; emulated mouse clicks are skipped so a
+## single tap is not counted twice.
+func _input(event: InputEvent) -> void:
+	if _leaving >= 0.0 or ship == null:
 		return
-	if event is InputEventKey and event.pressed and event.physical_keycode == KEY_L:
+	var tap_pos := Vector2(-1, -1)
+	var go := false
+	if event is InputEventScreenTouch and event.pressed:
+		tap_pos = event.position
+		go = true
+	elif event is InputEventMouseButton and event.pressed and event.device != InputEvent.DEVICE_ID_EMULATION:
+		tap_pos = event.position
+		go = true
+	elif event is InputEventKey and event.pressed and not event.echo:
+		if event.physical_keycode == KEY_L:
+			Loc.toggle_language()
+			print("[TITLE] key L -> language %s" % Loc.language)
+			get_viewport().set_input_as_handled()
+			return
+		go = true
+	elif event is InputEventJoypadButton and event.pressed:
+		go = true
+	if not go:
+		return
+	get_viewport().set_input_as_handled()
+	var ly := _oy() + 440.0
+	if tap_pos.y > ly - 16.0 and tap_pos.y < ly + 10.0:
 		Loc.toggle_language()
+		print("[TITLE] tap %s on language line -> %s" % [tap_pos, Loc.language])
 		return
-	if event is InputEventMouseButton and event.pressed and event.position.y > 424.0 and event.position.y < 450.0:
-		Loc.toggle_language() # tap the language line (touch is emulated as mouse)
-		return
-	var go: bool = (event is InputEventKey and event.pressed and not event.echo) or (event is InputEventMouseButton and event.pressed) or (event is InputEventJoypadButton and event.pressed)
-	if go:
-		_leaving = 0.0
-		AudioManager.play("dash")
+	print("[TITLE] start via %s at %s" % [event.get_class(), tap_pos])
+	_leaving = 0.0
+	AudioManager.play("dash")
+
+## Vertical offset that centres the 270x480 title layout in the (expanded) viewport, inside the safe area.
+func _oy() -> float:
+	var vs := K.vsize(self)
+	var ins := K.safe_insets(self)
+	return floorf(clampf((vs.y - 480.0) / 2.0, ins.y, maxf(ins.y, vs.y - 480.0 - ins.w)))
 
 func _process(delta: float) -> void:
 	_t += delta
 	if _leaving >= 0.0:
 		_leaving += delta
 		if _leaving > 0.35:
+			_leaving = -100.0
+			print("[TITLE] change scene -> battle")
 			get_tree().change_scene_to_file("res://scenes/battle.tscn")
 	queue_redraw()
 
 func _draw() -> void:
 	if ship == null:
 		return
-	var W := 270.0
+	var vs := K.vsize(self)
+	var ins := K.safe_insets(self)
 	var k := K.ease_out_cubic(_t / 0.8)
-	# frame corners + micro telemetry
-	K.brackets(self, Rect2(6, 6, 258, 468), 10, Color(K.ACCENT, 0.5))
-	K.text(self, Vector2(12, 20), "SIG//0x0CB3", Color(K.ACCENT, 0.5))
-	K.text(self, Vector2(0, 20), "%06.2f" % fmod(_t * 13.7 + 120.0, 1000.0), Color(K.ACCENT, 0.5), K.FS_BODY, HORIZONTAL_ALIGNMENT_RIGHT, W - 12)
+	# frame corners + micro telemetry hug the real screen edges (inside the safe area)
+	var fr := Rect2(6 + ins.x, 6 + ins.y, vs.x - 12 - ins.x - ins.z, vs.y - 12 - ins.y - ins.w)
+	K.brackets(self, fr, 10, Color(K.ACCENT, 0.5))
+	K.text(self, fr.position + Vector2(6, 14), "SIG//0x0CB3", Color(K.ACCENT, 0.5))
+	K.text(self, Vector2(fr.position.x, fr.position.y + 14), "%06.2f" % fmod(_t * 13.7 + 120.0, 1000.0), Color(K.ACCENT, 0.5), K.FS_BODY, HORIZONTAL_ALIGNMENT_RIGHT, fr.size.x - 6)
+	K.text(self, Vector2(0, fr.end.y - 6), "v0.4.1 · © VOID SIGNAL", Color(K.TEXT, 0.3), K.FS_BODY, HORIZONTAL_ALIGNMENT_CENTER, vs.x)
+	# the rest is a 270x480 composition centred in the expanded viewport
+	draw_set_transform(Vector2(floorf((vs.x - 270.0) / 2.0), _oy()))
+	var W := 270.0
 	K.text(self, Vector2(0, 100), tr("TITLE_YEAR"), Color(K.TEXT, 0.6 * k), K.FS_BODY, HORIZONTAL_ALIGNMENT_CENTER, W)
 	# logo
 	var ly := 152.0 + floorf((1.0 - k) * 12.0)
@@ -108,4 +147,3 @@ func _draw() -> void:
 	K.icon(self, "play", pr.position + Vector2(7, 7), Color(K.ACCENT, pa))
 	K.text(self, pr.position + Vector2(17, 14), ptxt, Color(K.TEXT, pa))
 	K.text(self, Vector2(0, 440), tr("TITLE_LANG_TAP" if touch else "TITLE_LANG_HINT"), K.DIM, K.FS_BODY, HORIZONTAL_ALIGNMENT_CENTER, W)
-	K.text(self, Vector2(0, 462), "v0.3 · PHASE 2B · © VOID SIGNAL", Color(K.TEXT, 0.3), K.FS_BODY, HORIZONTAL_ALIGNMENT_CENTER, W)

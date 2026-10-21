@@ -23,12 +23,15 @@ func _draw() -> void:
 	if k <= 0.0:
 		return
 	var col := Color(PixelLib.C_RED, 0.25 + 0.5 * k)
+	var vs := get_viewport_rect().size
+	var VW := vs.x
+	var VH := vs.y
 	if bool(SaveManager.settings.get("reduce_flash", false)):
 		var t := 1.0 + k * 3.0
-		draw_rect(Rect2(0, 0, 270, t), col)
-		draw_rect(Rect2(0, 480 - t, 270, t), col)
-		draw_rect(Rect2(0, 0, t, 480), col)
-		draw_rect(Rect2(270 - t, 0, t, 480), col)
+		draw_rect(Rect2(0, 0, VW, t), col)
+		draw_rect(Rect2(0, VH - t, VW, t), col)
+		draw_rect(Rect2(0, 0, t, VH), col)
+		draw_rect(Rect2(VW - t, 0, t, VH), col)
 		return
 	rng.seed = int(_t * 15.0)
 	var n := int(40 + 160 * k)
@@ -38,10 +41,10 @@ func _draw() -> void:
 		var along := rng.randf()
 		var p: Vector2
 		match side:
-			0: p = Vector2(along * 270, depth)
-			1: p = Vector2(along * 270, 480 - depth)
-			2: p = Vector2(depth, along * 480)
-			_: p = Vector2(270 - depth, along * 480)
+			0: p = Vector2(along * VW, depth)
+			1: p = Vector2(along * VW, VH - depth)
+			2: p = Vector2(depth, along * VH)
+			_: p = Vector2(VW - depth, along * VH)
 		var s := float(1 + rng.randi() % 3)
 		var c := col if rng.randf() < 0.7 else Color(PixelLib.C_GOLD, col.a)
 		draw_rect(Rect2(p.floor(), Vector2(s, s)), c)

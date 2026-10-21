@@ -49,6 +49,7 @@ var touch: Control
 var _real_time := 0.0
 
 func _ready() -> void:
+	print("[BATTLE] ready viewport=%s touch=%s" % [get_viewport().get_visible_rect().size, DisplayServer.is_touchscreen_available()])
 	ObjectPool.reset()
 	GameManager.start_run()
 	get_tree().paused = false
@@ -174,7 +175,8 @@ func distance() -> float:
 	return -scroll_y
 
 func view_rect() -> Rect2:
-	return Rect2(Vector2(-VIEW.x / 2.0, scroll_y - VIEW.y / 2.0), VIEW)
+	var v := get_viewport().get_visible_rect().size
+	return Rect2(Vector2(-v.x / 2.0, scroll_y - v.y / 2.0), v)
 
 ## Soft walls: horizontal band and a vertical window inside the scrolling view (above the HUD).
 func constrain_player(p: Node2D, delta: float) -> void:

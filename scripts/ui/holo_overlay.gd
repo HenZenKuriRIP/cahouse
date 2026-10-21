@@ -31,4 +31,5 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_t += delta
 	mat.set_shader_parameter("time_s", _t)
+	mat.set_shader_parameter("lines", get_viewport_rect().size.y)
 	mat.set_shader_parameter("flicker", 0.0 if bool(SaveManager.settings.get("reduce_flash", false)) else flicker_amount)

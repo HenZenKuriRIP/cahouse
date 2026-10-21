@@ -47,6 +47,14 @@ func _process(delta: float) -> void:
 	_rt += _real(delta)
 	if _busy:
 		return
+	if title_node and GameManager.shots_set == "flow":
+		if _rt > 1.8 and not done.has("flow_title"):
+			_busy = true
+			await shot("flow_title")
+			print("[FLOW] title: injecting InputEventScreenTouch tap (real Input path)")
+			await _tap(Vector2(135, 300))
+			_busy = false
+		return
 	if title_node:
 		if _rt > 1.8 and not done.has("title"):
 			_busy = true
@@ -54,6 +62,12 @@ func _process(delta: float) -> void:
 			get_tree().quit()
 		return
 	if battle == null:
+		return
+	if GameManager.shots_set == "flow":
+		if GameManager.run_time > 2.0 and not done.has("flow_end"):
+			_busy = true
+			await _flow_battle()
+			get_tree().quit()
 		return
 	if GameManager.shots_set == "touch":
 		if GameManager.run_time > 7.0 and not done.has("touch_hud"):
@@ -147,3 +161,89 @@ func _touch_shot() -> void:
 	await _wait(0.5)
 	print("[SHOT] touch state: fingers=%d move=%s aim=%s aim_active=%s overload=%s insets=%s" % [tc.fingers.size(), tc.move_vec, tc.aim_vec, tc.aim_active(), tc.overload_held, tc.insets])
 	await shot("touch_hud")
+
+# ---- end-to-end touch flow (--shots=flow --touch, no autotest): every event goes through Input.parse_input_event ----
+func _win(p: Vector2) -> Vector2:
+	return get_viewport().get_final_transform() * p
+
+func _touch(idx: int, pressed: bool, p: Vector2) -> void:
+	var ev := InputEventScreenTouch.new()
+	ev.index = idx
+	ev.pressed = pressed
+	ev.position = _win(p)
+	Input.parse_input_event(ev)
+
+func _drag(idx: int, p: Vector2) -> void:
+	var ev := InputEventScreenDrag.new()
+	ev.index = idx
+	ev.position = _win(p)
+	Input.parse_input_event(ev)
+
+func _tap(p: Vector2) -> void:
+	_touch(0, true, p)
+	await _wait(0.08)
+	_touch(0, false, p)
+	await _wait(0.1)
+
+func _res(name: String, ok: bool, info: String) -> void:
+	print("[FLOW] %s %s %s" % ["PASS" if ok else "FAIL", name, info])
+
+func _flow_battle() -> void:
+	var tc: Control = battle.touch
+	var p: Node2D = battle.player
+	var vs := get_viewport().get_visible_rect().size
+	_res("title_tap_reaches_battle", true, "viewport=%s window=%s" % [vs, DisplayServer.window_get_size()])
+	var fired := [0]
+	EventBus.weapon_fired.connect(func(_id: String) -> void: fired[0] += 1)
+	var y0: float = p.global_position.y - battle.scroll_y
+	var lz: Rect2 = tc.left_zone()
+	var rz: Rect2 = tc.right_zone()
+	var a := lz.get_center()
+	var b := rz.get_center()
+	_touch(0, true, a)
+	_touch(1, true, b)
+	await _wait(0.05)
+	_drag(0, a + Vector2(0, -20))
+	_drag(1, b + Vector2(20, 0))
+	await _wait(0.7)
+	var y1: float = p.global_position.y - battle.scroll_y
+	_res("two_finger_move_aim_fire", tc.fingers.size() == 2 and y1 < y0 - 5.0 and p.aim_dir.x > 0.9 and fired[0] > 0,
+		"fingers=%d dy=%.1f aim=%s shots=%d" % [tc.fingers.size(), y1 - y0, p.aim_dir, fired[0]])
+	await shot("flow_battle")
+	_touch(0, false, a)
+	_touch(1, false, b)
+	await _wait(0.1)
+	_res("release", tc.fingers.is_empty() and tc.move_vec == Vector2.ZERO, "fingers=%d" % tc.fingers.size())
+	# triangle via finger 0 (emulated mouse path) -> drag to weapon vertex
+	var w: Control = battle.hud.widget
+	var v: PackedVector2Array = w.verts()
+	_touch(0, true, w.global_position + v[2])
+	await _wait(0.05)
+	_drag(0, w.global_position + v[0] + Vector2(0, 3))
+	await _wait(0.05)
+	var wt: float = p.energy.target.x
+	_touch(0, false, w.global_position + v[0])
+	_res("triangle_drag_finger0", wt > 0.6, "weapon=%.2f" % wt)
+	await _tap(w.global_position + w.chip_rect(2).get_center())
+	_res("triangle_chip_tap", p.energy.preset_name == "ESCAPE", p.energy.preset_name)
+	# pause button -> menu -> tap RESUME
+	await _tap(tc.buttons()["pause"].get_center())
+	await _wait(0.6)
+	var menu: Control = battle.pause_menu
+	_res("pause_button", get_tree().paused and menu != null, "paused=%s" % get_tree().paused)
+	await shot("flow_pause")
+	if menu:
+		var btn: Control = menu._buttons[0]
+		await _tap(btn.get_global_rect().get_center())
+		await _wait(0.3)
+	_res("menu_resume_tap", not get_tree().paused, "paused=%s" % get_tree().paused)
+	# builder button opens the builder; tapping CLOSE closes it
+	await _tap(tc.buttons()["build"].get_center())
+	await _wait(0.4)
+	var bl: Control = battle.builder
+	_res("builder_button", bl.visible, "")
+	await shot("flow_builder")
+	await _tap(bl.position + bl.button_rect(2).get_center())
+	await _wait(0.2)
+	_res("builder_close_tap", not bl.visible and not get_tree().paused, "visible=%s" % bl.visible)
+	done["flow_end"] = true

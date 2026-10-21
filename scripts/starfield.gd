@@ -22,10 +22,19 @@ func _process(d: float) -> void:
 	queue_redraw()
 
 func _draw() -> void:
-	draw_rect(Rect2(0, 0, W, H), Color("#080C18"))
+	var vs := get_viewport_rect().size
+	draw_rect(Rect2(Vector2.ZERO, vs), Color("#080C18"))
 	var cp := camera.get_screen_center_position() if camera else drift
 	for s in stars:
 		var layer: int = s[1]
 		var p: Vector2 = s[0] - cp * FACTORS[layer]
 		p = Vector2(fposmod(p.x, W), fposmod(p.y, H)).floor()
-		draw_rect(Rect2(p, Vector2.ONE * (2 if layer == 2 and int(p.x) % 5 == 0 else 1)), COLORS[layer])
+		var sz := Vector2.ONE * (2 if layer == 2 and int(p.x) % 5 == 0 else 1)
+		# tile the 270x480 star sheet across the (possibly expanded) viewport
+		var tx := 0.0
+		while tx < vs.x:
+			var ty := 0.0
+			while ty < vs.y:
+				draw_rect(Rect2(p + Vector2(tx, ty), sz), COLORS[layer])
+				ty += H
+			tx += W

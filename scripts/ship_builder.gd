@@ -28,11 +28,18 @@ var _t := 0.0
 var _open_t := 0.0
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	_layout()
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	mouse_filter = Control.MOUSE_FILTER_STOP
 
+func _layout() -> void:
+	var vs := get_viewport_rect().size
+	var ins := K.safe_insets(self)
+	size = Vector2(270, 480)
+	position = Vector2(floorf((vs.x - 270.0) / 2.0), floorf(clampf((vs.y - 480.0) / 2.0, ins.y, maxf(ins.y, vs.y - 480.0 - ins.w))))
+
 func open_with(b: Node) -> void:
+	_layout()
 	battle = b
 	model = b.player.ship.duplicate_model()
 	for c in model.cells:
@@ -175,7 +182,7 @@ func _draw() -> void:
 	if model == null:
 		return
 	var k := K.ease_out_cubic(_open_t / 0.2)
-	draw_rect(Rect2(0, 0, 270, 480), Color(K.BG, 0.97 * k))
+	draw_rect(Rect2(-position, get_viewport_rect().size), Color(K.BG, 0.97 * k))
 	K.scanlines(self, Rect2(0, 0, 270, 480), Color(K.ACCENT, 0.02))
 	# header
 	K.icon(self, "build", Vector2(8, 7), K.ACCENT)

@@ -1,0 +1,6 @@
+# godot logcat from Android emulator (x86_64 android-34, 1080x2400, TCG/no-KVM), APK 0.4.1 (UTC+8 timestamps)
+10-21 17:45:56.665  5802  5905 I godot   : [TITLE] ready viewport=(270.0, 600.0) window=(1080, 2400) touchscreen=true
+10-21 17:48:07.718  5802  5905 I godot   : [TITLE] start via InputEventScreenTouch at (80.25, 332.5)
+10-21 17:48:08.975  5802  5905 I godot   : [TITLE] change scene -> battle
+10-21 17:48:35.810  5802  5905 I godot   : [BATTLE] ready viewport=(270.0, 600.0) touch=true
+10-21 17:56:02.193  8017  8252 I godot   : [TITLE] ready viewport=(270.0, 600.0) window=(1080, 2400) touchscreen=true

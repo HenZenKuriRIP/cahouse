@@ -41,6 +41,24 @@ const ICONS := {
 	"module": ["#######", "#.....#", "#.###.#", "#.#.#.#", "#.###.#", "#.....#", "#######"],
 }
 
+## Visible logical viewport size (stretch aspect "expand": width/height grow with the device aspect).
+static func vsize(ci: CanvasItem) -> Vector2:
+	return ci.get_viewport_rect().size
+
+## Display safe area (notch / gesture bar) as logical-pixel insets: Vector4(left, top, right, bottom).
+static func safe_insets(ci: CanvasItem) -> Vector4:
+	if GameManager.force_safe != Vector4.ZERO:
+		return GameManager.force_safe
+	var win := DisplayServer.window_get_size()
+	var safe := DisplayServer.get_display_safe_area()
+	if win.x <= 0 or safe.size.x <= 0:
+		return Vector4.ZERO
+	var inv := ci.get_viewport().get_final_transform().affine_inverse()
+	var a: Vector2 = inv * Vector2(safe.position)
+	var b: Vector2 = inv * Vector2(safe.end)
+	var vs := vsize(ci)
+	return Vector4(clampf(a.x, 0, 40), clampf(a.y, 0, 60), clampf(vs.x - b.x, 0, 40), clampf(vs.y - b.y, 0, 60))
+
 static func px(v: Vector2) -> Vector2:
 	return v.floor()
 

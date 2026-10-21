@@ -27,7 +27,8 @@ func build(t: String, s: String, actions: Array, res: Array = [], col: Color = K
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var h := 64 + actions.size() * 24 + (results.size() * 16 + 18 if results.size() > 0 else 0)
-	panel_rect = Rect2(24, floorf((480 - h) / 2.0), 222, h)
+	var vs := get_viewport_rect().size
+	panel_rect = Rect2(floorf((vs.x - 222.0) / 2.0), floorf((vs.y - h) / 2.0), 222, h)
 	theme = Loc.ui_theme # CanvasLayer breaks theme propagation from the root window
 	box = VBoxContainer.new()
 	box.add_theme_constant_override("separation", 4)
@@ -57,8 +58,8 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	var k := K.ease_out_cubic(_t / OPEN_TIME)
-	draw_rect(Rect2(0, 0, 270, 480), Color(K.BG, 0.72 * k))
-	K.scanlines(self, Rect2(0, 0, 270, 480), Color(K.BG, 0.25 * k), 2)
+	draw_rect(Rect2(Vector2.ZERO, get_viewport_rect().size), Color(K.BG, 0.72 * k))
+	K.scanlines(self, Rect2(Vector2.ZERO, get_viewport_rect().size), Color(K.BG, 0.25 * k), 2)
 	# reveal: panel grows from a horizontal line
 	var c := panel_rect.get_center()
 	var hh := maxf(2.0, floorf(panel_rect.size.y * k / 2.0))

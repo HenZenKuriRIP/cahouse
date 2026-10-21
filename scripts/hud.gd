@@ -6,7 +6,11 @@ extends Control
 const K = preload("res://scripts/ui/ui_kit.gd")
 const EnergyWidget = preload("res://scripts/energy_widget.gd")
 const DASH_COOLDOWN := 1.2
-const W := 270.0
+var W := 270.0
+var H := 480.0
+var oy := 0.0 # bottom group offset (expanded viewport + safe area)
+var rx := 0.0 # right-anchored offset
+var st := 0.0 # safe-area top
 const MILESTONES := 6
 var battle: Node
 var indicators: Array = [] # [angle, life]
@@ -91,13 +95,30 @@ func _draw() -> void:
 		return
 	var p: Node2D = battle.player
 	var e: RefCounted = p.energy
+	var vs := K.vsize(self)
+	var ins := K.safe_insets(self)
+	W = vs.x
+	H = vs.y
+	st = ins.y
+	oy = floorf(H - 480.0 - ins.w)
+	rx = floorf(W - 270.0)
+	if widget:
+		widget.position = Vector2(101 + floorf(rx / 2.0), 408 + oy)
 	_draw_vignette(p)
-	_draw_top()
 	_draw_damage_arcs(p)
-	_draw_left(p, e)
-	_draw_right(p)
-	_draw_center_states(e)
+	draw_set_transform(Vector2(0, st))
+	_draw_top()
 	_draw_toasts()
+	draw_set_transform(Vector2(0, oy))
+	_draw_left(p, e)
+	draw_set_transform(Vector2(rx, oy))
+	_draw_right(p)
+	draw_set_transform(Vector2(floorf(rx / 2.0), oy))
+	var w0 := W
+	W = 270.0
+	_draw_center_states(e)
+	W = w0
+	draw_set_transform(Vector2.ZERO)
 
 func _draw_vignette(p: Node2D) -> void:
 	var hf: float = p.hull / maxf(1.0, p.max_hull)
@@ -112,9 +133,9 @@ func _draw_vignette(p: Node2D) -> void:
 		var d := i * 3
 		var c := Color(K.DANGER, a)
 		draw_rect(Rect2(0, d, W, 3), c)
-		draw_rect(Rect2(0, 480 - d - 3, W, 3), c)
-		draw_rect(Rect2(d, 0, 3, 480), c)
-		draw_rect(Rect2(W - d - 3, 0, 3, 480), c)
+		draw_rect(Rect2(0, H - d - 3, W, 3), c)
+		draw_rect(Rect2(d, 0, 3, H), c)
+		draw_rect(Rect2(W - d - 3, 0, 3, H), c)
 
 func _draw_top() -> void:
 	var r := Rect2(4, 3, W - 8, 34)

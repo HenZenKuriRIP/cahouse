@@ -11,15 +11,26 @@ var autotest_seconds: float = 0.0
 var autotest_god: bool = false
 var shots_mode: bool = false
 var shots_set: String = ""
+var force_safe := Vector4.ZERO # --safe=l,t,r,b : simulate a display cutout (testing)
 var force_touch: bool = false # --touch: force the touch layer on (desktop testing/screenshots)
 var _seed_from_cli: bool = false
 var _json_cache: Dictionary = {}
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	# Mobile: project default stretch = expand + fractional, fills any phone aspect (20:9, 19.5:9...) with no
+	# black bars. Desktop keeps crisp integer scaling (expand still fills the extra window area).
+	if not (OS.has_feature("mobile") or OS.has_feature("android") or OS.has_feature("ios")):
+		get_tree().root.content_scale_stretch = Window.CONTENT_SCALE_STRETCH_INTEGER
+	if DisplayServer.get_name() == "headless":
+		# no real window: keep the reference 270x480 so headless autotests stay deterministic
+		get_tree().root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--autotest="):
 			autotest_seconds = float(a.split("=")[1])
+		elif a.begins_with("--safe="):
+			var q := a.split("=")[1].split(",")
+			force_safe = Vector4(float(q[0]), float(q[1]), float(q[2]), float(q[3]))
 		elif a == "--touch":
 			force_touch = true
 		elif a.begins_with("--shots="):

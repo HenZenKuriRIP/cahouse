@@ -48,38 +48,41 @@ func refresh() -> void:
 		release_all()
 
 func _update_insets() -> void:
-	var win := DisplayServer.window_get_size()
-	var safe := DisplayServer.get_display_safe_area()
-	if win.x <= 0 or safe.size.x <= 0:
-		insets = Vector4.ZERO
-		return
-	var inv := get_viewport().get_final_transform().affine_inverse()
-	var a: Vector2 = inv * Vector2(safe.position)
-	var b: Vector2 = inv * Vector2(safe.end)
-	var vs := get_viewport_rect().size
-	insets = Vector4(clampf(a.x, 0, 40), clampf(a.y, 0, 60), clampf(vs.x - b.x, 0, 40), clampf(vs.y - b.y, 0, 60))
+	insets = K.safe_insets(self)
+
+## Layout frame: visible width, and the y offset of the bottom HUD group (cards start at 404 + oy()).
+func vw() -> float:
+	return get_viewport_rect().size.x
+
+func oy() -> float:
+	return floorf(get_viewport_rect().size.y - 480.0 - insets.w)
 
 # ---- layout (kept clear of the top bar 0-40 and bottom HUD cards 404+) ----
 func col_x() -> float:
-	return 270.0 - insets.z - 32.0
+	return vw() - insets.z - 32.0
 
 func buttons() -> Dictionary:
 	var x := col_x()
 	var top := 42.0 + insets.y
+	var b := oy()
 	return {
-		"pause": Rect2(270.0 - insets.z - 24.0, top, 20, 18),
-		"build": Rect2(270.0 - insets.z - 48.0, top, 20, 18),
-		"swap": Rect2(x, 256, 28, 22),
-		"secondary": Rect2(x, 282, 28, 28),
-		"overload": Rect2(x, 314, 28, 28),
-		"dash": Rect2(x, 346, 28, 52),
+		"pause": Rect2(vw() - insets.z - 24.0, top, 20, 18),
+		"build": Rect2(vw() - insets.z - 48.0, top, 20, 18),
+		"swap": Rect2(x, 256 + b, 28, 22),
+		"secondary": Rect2(x, 282 + b, 28, 28),
+		"overload": Rect2(x, 314 + b, 28, 28),
+		"dash": Rect2(x, 346 + b, 28, 52),
 	}
 
+## Stick zones: from below the top bar down to just above the bottom HUD cards.
 func left_zone() -> Rect2:
-	return Rect2(insets.x, 170, 134.0 - insets.x, 232 - insets.w)
+	var top := 70.0 + insets.y
+	return Rect2(insets.x, top, floorf(vw() / 2.0) - 1.0 - insets.x, 402.0 + oy() - top)
 
 func right_zone() -> Rect2:
-	return Rect2(136, 170, col_x() - 140.0, 232 - insets.w)
+	var top := 70.0 + insets.y
+	var x := floorf(vw() / 2.0) + 1.0
+	return Rect2(x, top, col_x() - 4.0 - x, 402.0 + oy() - top)
 
 func aim_active() -> bool:
 	for f in fingers.values():
@@ -228,8 +231,9 @@ func _draw() -> void:
 	var paused := get_tree().paused
 	if paused:
 		return
-	_draw_stick("move", IDLE_L, K.ACCENT, tr("TOUCH_MOVE"))
-	_draw_stick("aim", IDLE_R, K.DANGER, tr("TOUCH_AIM"))
+	_update_insets()
+	_draw_stick("move", IDLE_L + Vector2(0, oy()), K.ACCENT, tr("TOUCH_MOVE"))
+	_draw_stick("aim", Vector2(floorf(vw() / 2.0) + IDLE_R.x - 135.0, IDLE_R.y + oy()), K.DANGER, tr("TOUCH_AIM"))
 	var held := {}
 	for f in fingers.values():
 		held[f["kind"]] = true

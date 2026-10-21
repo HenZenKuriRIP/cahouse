@@ -89,3 +89,8 @@ godot --headless --path . -- --autotest=32 --timescale=6 [--god] [--seed=123]
 - JDK 17：`/opt/dl/jdk`（Temurin 17.0.20.1）；Android SDK：`/opt/dl/sdk`（platform-tools、build-tools 35.0.1 + 36.0.0、platforms android-35/36）；导出模板 4.7.2.stable（官方 .tpz 中的 android_*）；调试密钥 `/opt/dl/debug.keystore`（androiddebugkey/android）。编辑器设置已写入 `~/.config/godot/editor_settings-4.7.tres`。
 - `godot47 --headless --path . --import && godot47 --headless --path . --export-debug "Android" build/void-signal-debug.apk`
 - 校验：`apksigner verify --verbose build/void-signal-debug.apk`、`aapt dump badging build/void-signal-debug.apk`
+
+### v0.4.1 修复说明
+- 标题页触屏无响应：已修复（根因与验证见 DEVELOPMENT_LOG）。`adb logcat -s godot` 现在会输出 `[TITLE]`/`[BATTLE]` 日志。
+- 全面屏黑边：移动端改为 expand + fractional 缩放，HUD/触屏按钮贴合安全区。
+- APK 额外包含 x86_64，可装到模拟器。

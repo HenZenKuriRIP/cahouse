@@ -91,3 +91,13 @@
 - Xvfb 截图 `docs/screenshots/touch_hud.png` 走真实输入路径：`Input.parse_input_event` 以窗口像素坐标注入 3 个手指，日志确认换算到逻辑坐标正确（move=(0.545,-0.727)，aim 激活，超载按住）。
 - 导出：Temurin JDK 17、Android cmdline-tools（platform-tools、build-tools 35.0.1/36.0.0、android-35/36）、官方 4.7.2 导出模板；开启 ETC2/ASTC 导入（导出强制要求）；`export_presets.cfg` Android 预设；自适应图标 432px 前景/背景 + 192px 主图标。APK 58,384,529 字节，apksigner v2/v3 校验通过。
 - 未在真机运行；安全区仅作用于触屏层（HUD 顶栏本身未下移）。
+
+## 2026-10-21 v0.4.1：安卓触屏无响应 + 黑边 修复（UTC+8）
+**根因 1（触屏无响应）**：标题页 `title.gd` 是全屏 Control，保持默认 `MOUSE_FILTER_STOP`，却在 `_unhandled_input` 里等输入，并且只识别键盘/鼠标/手柄。安卓上一次轻触 = `InputEventScreenTouch`（标题完全没处理）+ 一个模拟鼠标点击。这个点击先交给 GUI，被这个 STOP 的 Control 吃掉并标记为已处理，所以 `_unhandled_input` 永远收不到。桌面上用键盘能进游戏，于是一直没发现。（桌面上点鼠标同样进不去。）
+修复：标题改为 `MOUSE_FILTER_IGNORE` + `_input`，直接处理 ScreenTouch/鼠标/键盘/手柄；跳过 `device == DEVICE_ID_EMULATION` 的模拟鼠标，避免一次轻触算两次。增加 `[TITLE]`/`[BATTLE]` 日志（输入、场景切换、视口尺寸），便于 `adb logcat -s godot` 排查。
+**根因 2（黑边）**：`stretch/aspect` 为默认 keep，且 `scale_mode=integer`：在 1080×2400（20:9）上只能取 4× 等比缩放 → 上下大黑边。
+修复：项目默认 `aspect=expand` + `scale_mode=fractional`；桌面运行时改回 integer；headless 强制 keep（保证 autotest 可复现）。HUD、触屏层、菜单、编辑器、标题、星空、边缘特效、全息扫描线都改用 `get_viewport_rect()`：顶栏/提示锚定顶部 + 安全区上边距，底部卡片/能量三角/触屏按钮锚定底部 + 安全区下边距，编辑器/标题居中。新增 `-- --safe=l,t,r,b` 模拟刘海。
+**验证**：
+- 新增 `--shots=flow --touch`（Xvfb，540×1200 即 20:9）：全部事件走 `Input.parse_input_event`（真实输入路径），共 9 项 PASS，包括轻触标题进入战斗、双指移动+瞄准开火、能量三角手指 0 拖动/芯片点按、暂停按钮、菜单“继续”、编辑器开/关。截图见 `docs/screenshots/safe_flow_*.png`（含 --safe=0,24,0,14）。
+- 安卓模拟器（x86_64 android-34，1080×2400）：KVM 嵌套虚拟化下 vCPU 不运行，只能用 `-accel off`（TCG）。系统极慢且反复出现 ANR，但 godot 日志记录到：`[TITLE] ready viewport=(270, 600) window=(1080, 2400) touchscreen=true` → 一次 `adb input tap` → `[TITLE] start via InputEventScreenTouch` → `[TITLE] change scene -> battle` → `[BATTLE] ready`。说明在真实安卓运行时上，标题已能收到触屏并进入战斗，且视口已扩展到 20:9。SwiftShader 下 3D SceneShader 编译失败的报错与 2D 游戏无关（模拟器 GPU 限制）。
+- 桌面 autotest 47/47。
